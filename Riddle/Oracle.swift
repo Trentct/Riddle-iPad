@@ -66,14 +66,7 @@ final class Oracle {
             ["type": "text", "text": "(纸上浮现了新的墨迹)"],
         ]
         history.append(["role": "user", "content": userContent])
-
-        var body: [String: Any] = [
-            "model": Secrets.model,
-            "stream": true,
-            "max_tokens": 512,
-            "messages": [["role": "system", "content": Self.persona]] + history,
-        ]
-        let messages = history  // capture for request
+        let messages = history
 
         return AsyncThrowingStream { continuation in
             let task = Task {
@@ -82,7 +75,12 @@ final class Oracle {
                     req.httpMethod = "POST"
                     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
                     req.setValue("Bearer \(Secrets.apiKey)", forHTTPHeaderField: "Authorization")
-                    body["messages"] = [["role": "system", "content": Self.persona]] + messages
+                    let body: [String: Any] = [
+                        "model": Secrets.model,
+                        "stream": true,
+                        "max_tokens": 512,
+                        "messages": [["role": "system", "content": Oracle.persona]] + messages,
+                    ]
                     req.httpBody = try JSONSerialization.data(withJSONObject: body)
                     req.timeoutInterval = 60
 
@@ -98,10 +96,18 @@ final class Oracle {
                     if let rest = splitter.flush() { continuation.yield(rest) }
                     continuation.finish()
                 } catch {
+                    // 失败回滚：移除本轮残留的 user turn，保持历史成对一致
+                    self.rollbackFailedTurn()
                     continuation.finish(throwing: error)
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private func rollbackFailedTurn() {
+        if let last = history.last, last["role"] as? String == "user" {
+            history.removeLast()
         }
     }
 
