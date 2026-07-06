@@ -22,4 +22,22 @@ final class ScriptTests: XCTestCase {
         let mask = Script.rasterize("", font: dancing)
         XCTAssertEqual(mask.pixels.filter { $0 }.count, 0)
     }
+
+    func testThinSlimsGlyphs() {
+        var mask = Script.rasterize("Yes, Harry?", font: dancing)
+        let before = mask.pixels.filter { $0 }.count
+        Script.thin(&mask)
+        let after = mask.pixels.filter { $0 }.count
+        XCTAssertGreaterThan(after, 0)
+        XCTAssertLessThan(after * 3, before, "细化应显著削瘦字形: \(before) -> \(after)")
+    }
+
+    func testThinCJK() {
+        var mask = Script.rasterize("哈", font: wenkai)
+        let before = mask.pixels.filter { $0 }.count
+        Script.thin(&mask)
+        let after = mask.pixels.filter { $0 }.count
+        XCTAssertGreaterThan(after, 0)
+        XCTAssertLessThan(after, before)
+    }
 }
