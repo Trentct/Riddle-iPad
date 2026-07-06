@@ -17,8 +17,8 @@ final class TurnEngine {
     /// 回合代号：抢占时自增，旧回合的异步续体自检后静默退场。
     private var turnID = 0
 
-    static let idleInterval: TimeInterval = 2.8
-    static let lingerSeconds: TimeInterval = 8
+    static let idleInterval: TimeInterval = 1.8
+    static let lingerSeconds: TimeInterval = 5
 
     init(canvasView: PKCanvasView, overlayHost: UIView) {
         self.canvasView = canvasView

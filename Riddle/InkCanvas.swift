@@ -4,7 +4,7 @@ import PencilKit
 enum Ink {
     static let userColor = UIColor(red: 0x1A / 255, green: 0x1A / 255, blue: 0x2E / 255, alpha: 1)
     static let quillColor = UIColor(red: 0x0F / 255, green: 0x0F / 255, blue: 0x23 / 255, alpha: 1)
-    static let paperColor = UIColor(red: 0xF5 / 255, green: 0xF0 / 255, blue: 0xE8 / 255, alpha: 1)
+    static let paperColor = UIColor(red: 0xF2 / 255, green: 0xED / 255, blue: 0xE1 / 255, alpha: 1)
 }
 
 struct InkCanvas: UIViewRepresentable {

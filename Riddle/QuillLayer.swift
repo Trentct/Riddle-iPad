@@ -77,18 +77,18 @@ final class QuillLayer {
         guard !written.isEmpty else { completion(); return }
         let layers = written
         written = []
-        let dur = 1.2 * 1.5
+        let dur = 1.2
         for (i, layer) in layers.enumerated() {
             let anim = CABasicAnimation(keyPath: "opacity")
             anim.fromValue = 1; anim.toValue = 0
-            anim.beginTime = CACurrentMediaTime() + 0.08 * 1.5 * Double(i % 40)
+            anim.beginTime = CACurrentMediaTime() + 0.08 * Double(i % 40)
             anim.duration = dur
             anim.fillMode = .both
             anim.isRemovedOnCompletion = false
             layer.add(anim, forKey: "fade")
         }
         let groups = Double(min(layers.count, 40))
-        let total = 0.08 * 1.5 * groups + dur
+        let total = 0.08 * groups + dur
         DispatchQueue.main.asyncAfter(deadline: .now() + total) {
             layers.forEach { $0.removeFromSuperlayer() }
             self.cursorY = self.pageBounds.height / 3
