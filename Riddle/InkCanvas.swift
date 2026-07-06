@@ -24,19 +24,15 @@ struct InkCanvas: UIViewRepresentable {
         canvasView.delegate = context.coordinator
         canvasView.isScrollEnabled = false     // PKCanvasView 是 UIScrollView 子类，禁掉内容滚动/缩放，避免双指手势被吞
 
-        let swipeLeft = UISwipeGestureRecognizer(target: context.coordinator,
-                                                  action: #selector(Coordinator.handleSwipeLeft))
-        swipeLeft.direction = .left
-        swipeLeft.numberOfTouchesRequired = 2
-        swipeLeft.delegate = context.coordinator
-        canvasView.addGestureRecognizer(swipeLeft)
-
-        let swipeRight = UISwipeGestureRecognizer(target: context.coordinator,
-                                                   action: #selector(Coordinator.handleSwipeRight))
-        swipeRight.direction = .right
-        swipeRight.numberOfTouchesRequired = 2
-        swipeRight.delegate = context.coordinator
-        canvasView.addGestureRecognizer(swipeRight)
+        // 双指翻纸：用 Pan（连续型，手势仲裁中比 Swipe 可靠）+ 手动判定横扫。
+        // Swipe 识别器挂在 PKCanvasView 上会被其内部手势仲裁饿死（真机上永不触发）。
+        let pan = UIPanGestureRecognizer(target: context.coordinator,
+                                         action: #selector(Coordinator.handleTwoFingerPan(_:)))
+        pan.minimumNumberOfTouches = 2
+        pan.maximumNumberOfTouches = 2
+        pan.allowedTouchTypes = [UITouch.TouchType.direct.rawValue as NSNumber]  // 仅手指，不抢 Pencil
+        pan.delegate = context.coordinator
+        canvasView.addGestureRecognizer(pan)
 
         return canvasView
     }
@@ -58,9 +54,23 @@ struct InkCanvas: UIViewRepresentable {
             onChange(canvasView.drawing)
         }
 
-        // 双指左滑 = 下一款纸，右滑 = 上一款纸，环绕切换
-        @objc func handleSwipeLeft() { cycle(1) }
-        @objc func handleSwipeRight() { cycle(-1) }
+        // 双指横扫判定：位移超阈值且以横向为主 → 翻纸。每次手势只翻一次。
+        private var panConsumed = false
+
+        @objc func handleTwoFingerPan(_ gr: UIPanGestureRecognizer) {
+            switch gr.state {
+            case .began:
+                panConsumed = false
+            case .changed:
+                guard !panConsumed, let view = gr.view else { return }
+                let t = gr.translation(in: view)
+                guard abs(t.x) > 60, abs(t.x) > 2 * abs(t.y) else { return }
+                panConsumed = true
+                cycle(t.x < 0 ? 1 : -1)   // 左滑下一款，右滑上一款
+            default:
+                break
+            }
+        }
 
         private func cycle(_ direction: Int) {
             PaperStyleStore.shared.cycle(direction)
@@ -68,9 +78,10 @@ struct InkCanvas: UIViewRepresentable {
             canvasView?.tool = PKInkingTool(.pen, color: PaperStyleStore.shared.current.userInk, width: 3)
         }
 
+        // 与 PKCanvasView 内部识别器并存，不参与互斥仲裁——这是双指手势在画布上能收到事件的关键。
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                                 shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            false
+            true
         }
     }
 }
