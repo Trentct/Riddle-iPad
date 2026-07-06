@@ -4,8 +4,7 @@ import SwiftUI
 struct RiddleApp: App {
     var body: some Scene {
         WindowGroup {
-            Text("Riddle")
-                .persistentSystemOverlays(.hidden)
+            DiaryView()
         }
     }
 }
