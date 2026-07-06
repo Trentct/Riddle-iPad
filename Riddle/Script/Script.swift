@@ -109,4 +109,52 @@ enum Script {
         strokes.sort { a, b in a.map(\.x).min()! < b.map(\.x).min()! }
         return strokes
     }
+
+    static func measure(_ text: String, font: UIFont) -> CGFloat {
+        NSAttributedString(string: text, attributes: [.font: font]).size().width
+    }
+
+    private static func isCJK(_ ch: Character) -> Bool {
+        guard let v = ch.unicodeScalars.first?.value else { return false }
+        return (0x4E00...0x9FFF).contains(v)      // 基本汉字
+            || (0x3000...0x303F).contains(v)      // CJK 标点
+            || (0xFF00...0xFFEF).contains(v)      // 全角符号
+    }
+
+    /// 切分为换行单元：英文单词一个单元，CJK 每字一个单元。
+    private static func tokenize(_ para: String) -> [String] {
+        var tokens: [String] = [], word = ""
+        for ch in para {
+            if ch.isWhitespace {
+                if !word.isEmpty { tokens.append(word); word = "" }
+            } else if isCJK(ch) {
+                if !word.isEmpty { tokens.append(word); word = "" }
+                tokens.append(String(ch))
+            } else {
+                word.append(ch)
+            }
+        }
+        if !word.isEmpty { tokens.append(word) }
+        return tokens
+    }
+
+    static func wrap(_ text: String, font: UIFont, maxWidth: CGFloat) -> [String] {
+        var lines: [String] = []
+        for para in text.components(separatedBy: .newlines) {
+            var current = ""
+            for token in tokenize(para) {
+                // 前后都是拉丁词时补一个空格
+                let glue = (current.isEmpty || isCJK(current.last!) || isCJK(token.first!)) ? "" : " "
+                let candidate = current + glue + token
+                if measure(candidate, font: font) <= maxWidth || current.isEmpty {
+                    current = candidate
+                } else {
+                    lines.append(current)
+                    current = token
+                }
+            }
+            if !current.isEmpty { lines.append(current) }
+        }
+        return lines
+    }
 }

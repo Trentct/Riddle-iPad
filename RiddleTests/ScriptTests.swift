@@ -61,4 +61,24 @@ final class ScriptTests: XCTestCase {
         let strokes = Script.trace(mask)
         XCTAssertFalse(strokes.isEmpty)
     }
+
+    func testWrapEnglish() {
+        let lines = Script.wrap("Do you know anything about the Chamber of Secrets?",
+                                font: dancing, maxWidth: 600)
+        XCTAssertGreaterThanOrEqual(lines.count, 2)
+        XCTAssertTrue(lines.allSatisfy { !$0.hasPrefix(" ") && !$0.hasSuffix(" ") })
+        // 内容无丢失
+        XCTAssertEqual(lines.joined(separator: " ").split(separator: " ").count, 9)
+    }
+
+    func testWrapCJK() {
+        let lines = Script.wrap("哈利波特，一个多么有趣的名字，告诉我你的故事吧",
+                                font: wenkai, maxWidth: 500)
+        XCTAssertGreaterThanOrEqual(lines.count, 2)
+        XCTAssertEqual(lines.joined(), "哈利波特，一个多么有趣的名字，告诉我你的故事吧")
+    }
+
+    func testWrapShortLineStaysOne() {
+        XCTAssertEqual(Script.wrap("Hi", font: dancing, maxWidth: 600), ["Hi"])
+    }
 }
