@@ -31,7 +31,6 @@ final class QuillLayer {
         let lines = Script.wrap(sentence, font: f, maxWidth: maxRasterWidth)
 
         var delay: CFTimeInterval = 0
-        let group = DispatchGroup()
         for line in lines {
             var mask = Script.rasterize(line, font: f)
             Script.thin(&mask)
@@ -53,7 +52,7 @@ final class QuillLayer {
                 layer.lineJoin = .round
                 // 缩放 + 平移到页面位置
                 layer.setAffineTransform(CGAffineTransform(scaleX: scaleDown, y: scaleDown))
-                layer.frame.origin = CGPoint(x: margin, y: lineY)
+                layer.position = CGPoint(x: margin, y: lineY)
                 layer.strokeEnd = 0
                 host.layer.addSublayer(layer)
                 written.append(layer)
@@ -73,7 +72,6 @@ final class QuillLayer {
             }
         }
         delay += 0.35                               // 句间 350ms
-        group.notify(queue: .main) {}
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { completion() }
     }
 
