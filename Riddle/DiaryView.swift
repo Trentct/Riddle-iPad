@@ -27,12 +27,14 @@ struct DiaryView: View {
         }
         .persistentSystemOverlays(.hidden)
         .statusBarHidden(true)
-        // TODO(Task 10): remove verification hook
-        .onTapGesture(count: 3) {
-            let quill = QuillLayer(host: overlayHost, pageBounds: overlayHost.bounds)
-            quill.write("Harry Potter — an interesting name indeed.") {
-                quill.write("哈利·波特，真是个有趣的名字。") {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { quill.fadeOutAll {} }
+        .onAppear {
+            // TODO(Task 10): remove verification hook（启动后 3 秒自动演示，替代被 PKCanvasView 吞掉的三连击）
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                let quill = QuillLayer(host: overlayHost, pageBounds: overlayHost.bounds)
+                quill.write("Harry Potter — an interesting name indeed.") {
+                    quill.write("哈利·波特，真是个有趣的名字。") {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { quill.fadeOutAll {} }
+                    }
                 }
             }
         }
