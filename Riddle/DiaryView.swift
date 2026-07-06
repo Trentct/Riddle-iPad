@@ -2,9 +2,9 @@ import SwiftUI
 import PencilKit
 
 struct DiaryView: View {
-    private let canvasView = PKCanvasView()
-    private let overlayHost = OverlayHostView()
-    @State private var idleTimer: Timer?
+    @State private var canvasView = PKCanvasView()
+    @State private var overlayHost = OverlayHostView()
+    @State private var engine: TurnEngine?
 
     var body: some View {
         ZStack {
@@ -13,14 +13,7 @@ struct DiaryView: View {
                            center: .center, startRadius: 200, endRadius: 900)
                 .ignoresSafeArea().allowsHitTesting(false)
             InkCanvas(canvasView: canvasView) { drawing in
-                idleTimer?.invalidate()
-                guard !drawing.strokes.isEmpty else { return }
-                idleTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { _ in
-                    let bounds = canvasView.bounds
-                    let snapshot = canvasView.drawing
-                    canvasView.drawing = PKDrawing()
-                    FadeLayer.drink(snapshot, in: overlayHost, bounds: bounds) {}
-                }
+                engine?.drawingChanged(drawing)
             }
             .ignoresSafeArea()
             OverlayHost(view: overlayHost).ignoresSafeArea().allowsHitTesting(false)
@@ -28,14 +21,8 @@ struct DiaryView: View {
         .persistentSystemOverlays(.hidden)
         .statusBarHidden(true)
         .onAppear {
-            // TODO(Task 10): remove verification hook（启动后 3 秒自动演示，替代被 PKCanvasView 吞掉的三连击）
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                let quill = QuillLayer(host: overlayHost, pageBounds: overlayHost.bounds)
-                quill.write("Harry Potter — an interesting name indeed.") {
-                    quill.write("哈利·波特，真是个有趣的名字。") {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { quill.fadeOutAll {} }
-                    }
-                }
+            if engine == nil {
+                engine = TurnEngine(canvasView: canvasView, overlayHost: overlayHost)
             }
         }
     }
