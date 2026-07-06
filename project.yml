@@ -1,0 +1,43 @@
+name: Riddle
+options:
+  bundleIdPrefix: com.trent
+configFiles:
+  Debug: Secrets.xcconfig
+  Release: Secrets.xcconfig
+targets:
+  Riddle:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources: [Riddle]
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: 2
+        SWIFT_VERSION: 5.9
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: Riddle/Info.plist
+      properties:
+        UIAppFonts: [DancingScript-Regular.ttf, LXGWWenKai-Regular.ttf]
+        UIStatusBarHidden: true
+        UIRequiresFullScreen: true
+        UILaunchScreen: {}
+        MOONSHOT_API_KEY: $(MOONSHOT_API_KEY)
+        MOONSHOT_BASE_URL: $(MOONSHOT_BASE_URL)
+        MOONSHOT_MODEL: $(MOONSHOT_MODEL)
+  RiddleTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources: [RiddleTests]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Riddle
+schemes:
+  Riddle:
+    build:
+      targets: { Riddle: all, RiddleTests: [test] }
+    test:
+      targets: [RiddleTests]

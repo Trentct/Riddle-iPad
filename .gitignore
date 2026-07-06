@@ -1,3 +1,4 @@
 Secrets.xcconfig
 *.xcodeproj
 .DS_Store
+.superpowers/
