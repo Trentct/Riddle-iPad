@@ -72,4 +72,41 @@ enum Script {
             if !changed { break }
         }
     }
+
+    /// 把骨架追踪成折线笔画，按最小 x 排序使动画像人手从左往右写。
+    static func trace(_ mask: InkMask) -> [[CGPoint]] {
+        let w = mask.width, h = mask.height
+        func at(_ x: Int, _ y: Int) -> Bool {
+            x >= 0 && y >= 0 && x < w && y < h && mask.pixels[y * w + x]
+        }
+        func neighbors(_ x: Int, _ y: Int) -> [(Int, Int)] {
+            var out: [(Int, Int)] = []
+            for dy in -1...1 {
+                for dx in -1...1 where dx != 0 || dy != 0 {
+                    if at(x + dx, y + dy) { out.append((x + dx, y + dy)) }
+                }
+            }
+            return out
+        }
+        var visited = [Bool](repeating: false, count: w * h)
+        // 端点（度=1）优先作为起点，然后是剩余点（环）。
+        var starts: [(Int, Int)] = []
+        for y in 0..<h { for x in 0..<w where at(x, y) && neighbors(x, y).count == 1 { starts.append((x, y)) } }
+        for y in 0..<h { for x in 0..<w where at(x, y) { starts.append((x, y)) } }
+        var strokes: [[CGPoint]] = []
+        for (sx, sy) in starts {
+            if visited[sy * w + sx] { continue }
+            var path = [CGPoint(x: CGFloat(sx), y: CGFloat(sy))]
+            visited[sy * w + sx] = true
+            var (cx, cy) = (sx, sy)
+            while let next = neighbors(cx, cy).first(where: { !visited[$0.1 * w + $0.0] }) {
+                visited[next.1 * w + next.0] = true
+                path.append(CGPoint(x: CGFloat(next.0), y: CGFloat(next.1)))
+                (cx, cy) = next
+            }
+            if path.count >= 3 { strokes.append(path) }
+        }
+        strokes.sort { a, b in a.map(\.x).min()! < b.map(\.x).min()! }
+        return strokes
+    }
 }

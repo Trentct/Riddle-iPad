@@ -40,4 +40,25 @@ final class ScriptTests: XCTestCase {
         XCTAssertGreaterThan(after, 0)
         XCTAssertLessThan(after, before)
     }
+
+    func testTraceFullPipeline() {
+        var mask = Script.rasterize("Yes, Harry?", font: dancing)
+        Script.thin(&mask)
+        let strokes = Script.trace(mask)
+        XCTAssertFalse(strokes.isEmpty)
+        let total = strokes.map(\.count).reduce(0, +)
+        XCTAssertGreaterThan(total, 200, "路径总点数应可观，实际 \(total)")
+        // 从左到右排序
+        let minXs = strokes.map { s in s.map(\.x).min()! }
+        XCTAssertEqual(minXs, minXs.sorted())
+        // 每条笔画至少 3 点
+        XCTAssertTrue(strokes.allSatisfy { $0.count >= 3 })
+    }
+
+    func testTraceCJKPipeline() {
+        var mask = Script.rasterize("你好", font: wenkai)
+        Script.thin(&mask)
+        let strokes = Script.trace(mask)
+        XCTAssertFalse(strokes.isEmpty)
+    }
 }
