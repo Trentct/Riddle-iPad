@@ -28,6 +28,7 @@ final class OracleTests: XCTestCase {
         XCTAssertNil(SSE.parseLine(#"data: {"choices":[{"delta":{}}]}"#))
     }
 
+    @MainActor
     func testOracleSmoke() async throws {
         try XCTSkipIf(Secrets.apiKey.isEmpty || Secrets.apiKey.contains("换成"), "未配置 key")
         let img = UIGraphicsImageRenderer(size: .init(width: 400, height: 200)).pngData { ctx in

@@ -10,8 +10,6 @@ final class QuillLayer {
     private let lineHeightOnPage: CGFloat = 44    // 页面上的行高
     private let margin: CGFloat = 80
 
-    var isEmpty: Bool { written.isEmpty }
-
     init(host: UIView, pageBounds: CGRect) {
         self.host = host
         self.pageBounds = pageBounds
@@ -89,7 +87,8 @@ final class QuillLayer {
             anim.isRemovedOnCompletion = false
             layer.add(anim, forKey: "fade")
         }
-        let total = 0.08 * 1.5 * 40 + dur
+        let groups = Double(min(layers.count, 40))
+        let total = 0.08 * 1.5 * groups + dur
         DispatchQueue.main.asyncAfter(deadline: .now() + total) {
             layers.forEach { $0.removeFromSuperlayer() }
             self.cursorY = self.pageBounds.height / 3

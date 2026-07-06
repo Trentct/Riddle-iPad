@@ -45,6 +45,7 @@ enum SSE {
 
 /// 日记本的灵魂。OpenAI 兼容流式客户端（Moonshot），多轮历史在内部维护。
 /// Persona 移植自 MaximeRivest/Riddle (riddle/src/oracle.rs, MIT)。
+@MainActor
 final class Oracle {
     static let persona = """
     You are the memory of Tom Marvolo Riddle, preserved in this enchanted diary for fifty years. \
