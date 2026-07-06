@@ -10,39 +10,42 @@ struct DiaryView: View {
     var body: some View {
         let style = paperStore.current
         ZStack {
-            Color(style.paperColor).ignoresSafeArea()
+            Group {
+                Color(style.paperColor).ignoresSafeArea()
 
-            if style.ruled {
-                RuledLinesView()
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-            }
+                if style.ruled {
+                    RuledLinesView()
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+                }
 
-            Image(uiImage: PaperTexture.tile)
-                .resizable(resizingMode: .tile)
-                .opacity(style.noiseOpacity)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
-            if style.riceFiber {
-                Image(uiImage: PaperTexture.fiberTile)
+                Image(uiImage: PaperTexture.tile)
                     .resizable(resizingMode: .tile)
-                    .opacity(0.03)
+                    .opacity(style.noiseOpacity)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
-                    .transition(.opacity)
-            }
 
-            RadialGradient(colors: [.clear, .black.opacity(style.vignetteOpacity)],
-                           center: .center, startRadius: 200, endRadius: 900)
-                .ignoresSafeArea().allowsHitTesting(false)
+                if style.riceFiber {
+                    Image(uiImage: PaperTexture.fiberTile)
+                        .resizable(resizingMode: .tile)
+                        .opacity(0.03)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                }
+
+                RadialGradient(colors: [.clear, .black.opacity(style.vignetteOpacity)],
+                               center: .center, startRadius: 200, endRadius: 900)
+                    .ignoresSafeArea().allowsHitTesting(false)
+            }
+            .animation(.easeInOut(duration: 0.35), value: style.id)
+
             InkCanvas(canvasView: canvasView) { drawing in
                 engine?.drawingChanged(drawing)
             }
             .ignoresSafeArea()
             OverlayHost(view: overlayHost).ignoresSafeArea().allowsHitTesting(false)
         }
-        .animation(.easeInOut(duration: 0.35), value: style.id)
         .persistentSystemOverlays(.hidden)
         .statusBarHidden(true)
         .onAppear {

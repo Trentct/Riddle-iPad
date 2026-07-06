@@ -53,12 +53,13 @@ enum RuledMetrics {
     static let lineSpacing: CGFloat = 44
     static let lineColor = UIColor(red: 0xB9 / 255, green: 0xC4 / 255, blue: 0xD6 / 255, alpha: 1)
     static let lineWidth: CGFloat = 0.5
-    static let marginX: CGFloat = 90
+    static let marginX: CGFloat = 64
     static let marginColor = UIColor(red: 0xD9 / 255, green: 0x8B / 255, blue: 0x8B / 255, alpha: 1)
     static let marginWidth: CGFloat = 1
 }
 
 /// 当前纸张样式的持久化存储与切换逻辑。`shared` 是全局单例，Ink 与所有 UI 共用同一份状态。
+/// 仅主线程访问（所有调用点：手势回调、@MainActor TurnEngine、主线程动画）——如未来引入后台访问需改为 @MainActor。
 final class PaperStyleStore: ObservableObject {
     static let shared = PaperStyleStore()
     static let defaultsKey = "paperStyleID"

@@ -16,7 +16,11 @@ struct InkCanvas: UIViewRepresentable {
         canvasView.backgroundColor = .clear
         canvasView.isOpaque = false
         canvasView.tool = PKInkingTool(.pen, color: Ink.userColor, width: 3)
-        canvasView.drawingPolicy = .anyInput   // 模拟器鼠标可画；真机拍摄时可改 .pencilOnly
+        #if targetEnvironment(simulator)
+        canvasView.drawingPolicy = .anyInput    // 模拟器鼠标可画
+        #else
+        canvasView.drawingPolicy = .pencilOnly  // 真机仅 Pencil：双指手势永不误触发笔迹
+        #endif
         canvasView.delegate = context.coordinator
         canvasView.isScrollEnabled = false     // PKCanvasView 是 UIScrollView 子类，禁掉内容滚动/缩放，避免双指手势被吞
 

@@ -9,6 +9,7 @@ final class QuillLayer {
     private let rasterPx: CGFloat = 128           // 大字号光栅化保骨架质量
     private let lineHeightOnPage: CGFloat = 44    // 页面上的行高
     private let margin: CGFloat = 80
+    private let inkColor: CGColor = Ink.quillColor.cgColor   // 回合开始时定色，换纸不影响写到一半的回信
 
     init(host: UIView, pageBounds: CGRect) {
         self.host = host
@@ -43,7 +44,7 @@ final class QuillLayer {
 
                 let layer = CAShapeLayer()
                 layer.path = path.cgPath
-                layer.strokeColor = Ink.quillColor.cgColor
+                layer.strokeColor = inkColor
                 layer.fillColor = nil
                 layer.lineWidth = 2.2 / scaleDown   // 缩放后视觉 ~2.2pt
                 layer.lineCap = .round
