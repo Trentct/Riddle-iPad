@@ -151,11 +151,18 @@ struct HandPickerView: View {
     @StateObject private var cache = HandSampleCache.shared
     @State private var rowFrames: [CGRect] = []
     @State private var flashIndex: Int?
-    @State private var contentOpacity: Double = 1
     @State private var isPicked = false
 
     private let rowSpacing: CGFloat = 40
     private let guideBlockHeight: CGFloat = 96
+    private let hMargin: CGFloat = 60
+
+    /// 纯函数：把 natural 尺寸等比缩放进 maxWidth×maxHeight 的框内，永不放大（scale 上限 1）。
+    /// 供显示（`rowImage`）与命中框（`computeRowFrames`）共用同一套缩放数学，避免二者失配。
+    static func fittedSize(natural: CGSize, maxWidth: CGFloat, maxHeight: CGFloat) -> CGSize {
+        let scale = min(maxHeight / natural.height, maxWidth / natural.width, 1)
+        return CGSize(width: natural.width * scale, height: natural.height * scale)
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -177,7 +184,7 @@ struct HandPickerView: View {
                     .position(x: geo.size.width / 2, y: layoutTopY(containerSize: geo.size) + guideBlockHeight / 2)
 
                 ForEach(Array(ReplyHands.all.enumerated()), id: \.offset) { index, hand in
-                    rowImage(hand: hand, index: index)
+                    rowImage(hand: hand, index: index, containerSize: geo.size)
                         .position(x: geo.size.width / 2, y: frames[index].midY)
                 }
 
@@ -186,13 +193,16 @@ struct HandPickerView: View {
                     .ignoresSafeArea()
                 OverlayHost(view: fadeHost).ignoresSafeArea().allowsHitTesting(false)
             }
-            .opacity(contentOpacity)
             .onAppear {
                 cache.warm()
                 rowFrames = frames
             }
             .onChange(of: geo.size) { _, newSize in
                 rowFrames = computeRowFrames(containerSize: newSize)
+            }
+            .onChange(of: cache.images.count) { _, _ in
+                // 样字图片陆续从后台缓存写入后，命中框需要用真实图片尺寸重新计算（首次 onAppear 时可能还没缓存好）。
+                rowFrames = computeRowFrames(containerSize: geo.size)
             }
         }
         .ignoresSafeArea()
@@ -201,9 +211,13 @@ struct HandPickerView: View {
     }
 
     @ViewBuilder
-    private func rowImage(hand: ReplyHand, index: Int) -> some View {
+    private func rowImage(hand: ReplyHand, index: Int, containerSize: CGSize) -> some View {
         if let image = cache.images[hand.id] {
+            let maxWidth = containerSize.width - 2 * hMargin
             Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: maxWidth, maxHeight: HandSampleRenderer.rowHeight)
                 .scaleEffect(flashIndex == index ? 1.03 : 1.0)
                 .brightness(flashIndex == index ? -0.4 : 0)
                 .animation(.easeInOut(duration: 0.4), value: flashIndex)
@@ -219,12 +233,21 @@ struct HandPickerView: View {
         return max(40, (containerSize.height - totalHeight) / 2)
     }
 
+    /// 命中框 = 每行「实际显示出的」样字矩形（居中于该行中心，尺寸取自与 `rowImage` 同一套 `fittedSize` 缩放），
+    /// 再向四周放宽 24pt 作为圈选容错，而不是整条容器宽度——避免空白页边距也能被圈中。
     private func computeRowFrames(containerSize: CGSize) -> [CGRect] {
         let rowHeight = HandSampleRenderer.rowHeight
         let topY = layoutTopY(containerSize: containerSize)
+        let maxWidth = containerSize.width - 2 * hMargin
         return ReplyHands.all.indices.map { i in
-            let y = topY + guideBlockHeight + CGFloat(i) * (rowHeight + rowSpacing)
-            return CGRect(x: 0, y: y, width: containerSize.width, height: rowHeight)
+            let hand = ReplyHands.all[i]
+            let centerY = topY + guideBlockHeight + CGFloat(i) * (rowHeight + rowSpacing) + rowHeight / 2
+            let natural = cache.images[hand.id]?.size ?? CGSize(width: maxWidth, height: rowHeight)
+            let fitted = Self.fittedSize(natural: natural, maxWidth: maxWidth, maxHeight: rowHeight)
+            let rect = CGRect(x: containerSize.width / 2 - fitted.width / 2,
+                               y: centerY - fitted.height / 2,
+                               width: fitted.width, height: fitted.height)
+            return rect.insetBy(dx: -24, dy: -24)
         }
     }
 
@@ -235,8 +258,6 @@ struct HandPickerView: View {
         flashIndex = index
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(0.4))
-            withAnimation(.easeInOut(duration: 0.35)) { contentOpacity = 0 }
-            try? await Task.sleep(for: .seconds(0.35))
             onPicked(hand)
         }
     }

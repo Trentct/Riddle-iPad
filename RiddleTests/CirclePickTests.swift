@@ -26,4 +26,12 @@ final class CirclePickTests: XCTestCase {
         let strokeBounds = CGRect(x: 0, y: 30, width: 300, height: 60)
         XCTAssertEqual(CirclePick.pickRow(strokeBounds: strokeBounds, rowFrames: rowFrames), 0)
     }
+
+    func testFittedSizeClampsWidthAndKeepsAspect() {
+        let fitted = HandPickerView.fittedSize(natural: CGSize(width: 2000, height: 100), maxWidth: 800, maxHeight: 64)
+        XCTAssertEqual(fitted.width, 800, accuracy: 0.01)
+        XCTAssertEqual(fitted.height, 40, accuracy: 0.01)   // aspect preserved
+        let small = HandPickerView.fittedSize(natural: CGSize(width: 100, height: 50), maxWidth: 800, maxHeight: 64)
+        XCTAssertEqual(small.width, 100, accuracy: 0.01)    // never upscale (scale capped at 1)
+    }
 }
