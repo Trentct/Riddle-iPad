@@ -15,6 +15,7 @@ targets:
         TARGETED_DEVICE_FAMILY: 2
         SWIFT_VERSION: 5.9
         CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
       path: Riddle/Info.plist
       properties:

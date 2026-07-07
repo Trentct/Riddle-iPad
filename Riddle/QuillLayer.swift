@@ -33,7 +33,8 @@ final class QuillLayer {
         for line in lines {
             var mask = Script.rasterize(line, font: f)
             Script.thin(&mask)
-            let strokes = Script.trace(mask)
+            var rng = SystemRandomNumberGenerator()
+            let strokes = Script.humanize(Script.trace(mask), using: &rng)
             let lineY = cursorY
             cursorY += lineHeightOnPage
 
@@ -44,9 +45,10 @@ final class QuillLayer {
 
                 let layer = CAShapeLayer()
                 layer.path = path.cgPath
-                layer.strokeColor = inkColor
+                let randomAlpha = CGFloat.random(in: 0.85...1.0, using: &rng)
+                layer.strokeColor = UIColor(cgColor: inkColor).withAlphaComponent(randomAlpha).cgColor
                 layer.fillColor = nil
-                layer.lineWidth = 2.2 / scaleDown   // 缩放后视觉 ~2.2pt
+                layer.lineWidth = CGFloat.random(in: 1.8...2.6, using: &rng) / scaleDown
                 layer.lineCap = .round
                 layer.lineJoin = .round
                 // 缩放 + 平移到页面位置

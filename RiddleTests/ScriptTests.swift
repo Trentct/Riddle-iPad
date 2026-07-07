@@ -81,4 +81,32 @@ final class ScriptTests: XCTestCase {
     func testWrapShortLineStaysOne() {
         XCTAssertEqual(Script.wrap("Hi", font: dancing, maxWidth: 600), ["Hi"])
     }
+
+    struct SeededRNG: RandomNumberGenerator {
+        var state: UInt64
+        init(seed: UInt64) { state = seed }
+        mutating func next() -> UInt64 {
+            state ^= state << 13; state ^= state >> 7; state ^= state << 17
+            return state
+        }
+    }
+
+    func testHumanizeBoundedAndShapePreserving() {
+        var rng = SeededRNG(seed: 42)
+        let stroke: [[CGPoint]] = [(0..<50).map { CGPoint(x: CGFloat($0), y: 10) }]
+        let out = Script.humanize(stroke, amplitude: 2.0, using: &rng)
+        XCTAssertEqual(out.count, 1)
+        XCTAssertEqual(out[0].count, 50)
+        for (a, b) in zip(stroke[0], out[0]) {
+            XCTAssertLessThanOrEqual(abs(a.x - b.x), 2.001, "扰动越界")
+            XCTAssertLessThanOrEqual(abs(a.y - b.y), 2.001, "扰动越界")
+        }
+        XCTAssertTrue(zip(stroke[0], out[0]).contains { $0 != $1 }, "应确有扰动")
+    }
+
+    func testHumanizeKeepsTinyStrokesIntact() {
+        var rng = SeededRNG(seed: 1)
+        let tiny: [[CGPoint]] = [[CGPoint(x: 0, y: 0)]]
+        XCTAssertEqual(Script.humanize(tiny, using: &rng)[0].count, 1)
+    }
 }
