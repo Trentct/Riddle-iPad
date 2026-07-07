@@ -158,25 +158,24 @@ enum Script {
         return lines
     }
 
-    /// 给骨架笔画注入"人味"：平滑扰动 + 有界抖动（栅格像素空间）。纯函数，RNG 可注入以便测试。
-    static func humanize(_ strokes: [[CGPoint]], amplitude: CGFloat = 2.0,
-                         wavelength: Int = 8,
+    /// 人味 v2：笔画级姿态变化（微旋转/微缩放，绕笔画质心），点级噪声近零——手稳，但每笔有姿态。
+    static func humanize(_ strokes: [[CGPoint]], amplitude: CGFloat = 0.4,
+                         maxRotation: CGFloat = .pi / 120,   // ±1.5°
+                         maxScaleDelta: CGFloat = 0.03,      // ±3%
                          using rng: inout some RandomNumberGenerator) -> [[CGPoint]] {
         strokes.map { stroke in
             guard stroke.count >= 2 else { return stroke }
-            // 每 wavelength 个点取一个随机偏移锚点，线性插值成平滑扰动曲线
-            let anchorCount = max(stroke.count / wavelength, 2)
-            let anchors: [CGVector] = (0...anchorCount).map { _ in
-                CGVector(dx: CGFloat.random(in: -amplitude...amplitude, using: &rng),
-                         dy: CGFloat.random(in: -amplitude...amplitude, using: &rng))
-            }
-            return stroke.enumerated().map { i, p in
-                let t = CGFloat(i) / CGFloat(max(stroke.count - 1, 1)) * CGFloat(anchorCount)
-                let idx = min(Int(t), anchorCount - 1)
-                let frac = t - CGFloat(idx)
-                let dx = anchors[idx].dx * (1 - frac) + anchors[idx + 1].dx * frac
-                let dy = anchors[idx].dy * (1 - frac) + anchors[idx + 1].dy * frac
-                return CGPoint(x: p.x + dx, y: p.y + dy)
+            let cx = stroke.map(\.x).reduce(0, +) / CGFloat(stroke.count)
+            let cy = stroke.map(\.y).reduce(0, +) / CGFloat(stroke.count)
+            let angle = CGFloat.random(in: -maxRotation...maxRotation, using: &rng)
+            let scale = 1 + CGFloat.random(in: -maxScaleDelta...maxScaleDelta, using: &rng)
+            let (s, c) = (sin(angle), cos(angle))
+            return stroke.map { p in
+                let dx = (p.x - cx) * scale, dy = (p.y - cy) * scale
+                let rx = dx * c - dy * s, ry = dx * s + dy * c
+                let jx = CGFloat.random(in: -amplitude...amplitude, using: &rng)
+                let jy = CGFloat.random(in: -amplitude...amplitude, using: &rng)
+                return CGPoint(x: cx + rx + jx, y: cy + ry + jy)
             }
         }
     }

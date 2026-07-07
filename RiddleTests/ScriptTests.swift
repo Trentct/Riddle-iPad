@@ -93,15 +93,17 @@ final class ScriptTests: XCTestCase {
 
     func testHumanizeBoundedAndShapePreserving() {
         var rng = SeededRNG(seed: 42)
+        // 50 点水平线，质心在 x=24.5。旋转 ±1.5° + 缩放 ±3% 对半长 25px 的最大位移
+        // ≈ 25 * (sin(1.5°) + 0.03) ≈ 1.4，加上点级噪声振幅 0.4 → 上界给到 2.5 保守取整。
         let stroke: [[CGPoint]] = [(0..<50).map { CGPoint(x: CGFloat($0), y: 10) }]
-        let out = Script.humanize(stroke, amplitude: 2.0, using: &rng)
+        let out = Script.humanize(stroke, using: &rng)
         XCTAssertEqual(out.count, 1)
         XCTAssertEqual(out[0].count, 50)
         for (a, b) in zip(stroke[0], out[0]) {
-            XCTAssertLessThanOrEqual(abs(a.x - b.x), 2.001, "扰动越界")
-            XCTAssertLessThanOrEqual(abs(a.y - b.y), 2.001, "扰动越界")
+            XCTAssertLessThanOrEqual(abs(a.x - b.x), 2.5, "姿态变化越界")
+            XCTAssertLessThanOrEqual(abs(a.y - b.y), 2.5, "姿态变化越界")
         }
-        XCTAssertTrue(zip(stroke[0], out[0]).contains { $0 != $1 }, "应确有扰动")
+        XCTAssertTrue(zip(stroke[0], out[0]).contains { $0 != $1 }, "应确有变化")
     }
 
     func testHumanizeKeepsTinyStrokesIntact() {
