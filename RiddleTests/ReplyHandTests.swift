@@ -2,11 +2,15 @@ import XCTest
 @testable import Riddle
 
 final class ReplyHandTests: XCTestCase {
-    func testAllFourHandFontsLoad() {
+    func testAllFiveHandFontsLoad() {
         for hand in ReplyHands.all {
             let font = UIFont(name: hand.fontName, size: 40)
             XCTAssertNotNil(font, "字体 \(hand.fontName)（\(hand.id)）应可加载")
         }
+    }
+
+    func testOrderIsWenkaiXiaxingHanchanLongcangMaocao() {
+        XCTAssertEqual(ReplyHands.all.map(\.id), ["wenkai", "xiaxing", "hanchan", "longcang", "maocao"])
     }
 
     @MainActor

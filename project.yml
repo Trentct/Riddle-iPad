@@ -19,7 +19,7 @@ targets:
     info:
       path: Riddle/Info.plist
       properties:
-        UIAppFonts: [DancingScript-Regular.ttf, LXGWWenKai-Regular.ttf, Slidexiaxing-Regular.ttf, LongCang-Regular.ttf, LiuJianMaoCao-Regular.ttf]
+        UIAppFonts: [DancingScript-Regular.ttf, LXGWWenKai-Regular.ttf, Slidexiaxing-Regular.ttf, YFHCT.ttf, LongCang-Regular.ttf, LiuJianMaoCao-Regular.ttf]
         UIUserInterfaceStyle: Light
         UIStatusBarHidden: true
         UIRequiresFullScreen: true

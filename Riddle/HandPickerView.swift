@@ -22,7 +22,7 @@ enum CirclePick {
 /// 把一款手迹的样字句子经 Script 管线（rasterize→thin→trace→humanize）渲染成静态 UIImage。
 /// 计算较慢（~0.2-0.3s/款），务必只在后台调用一次并缓存。
 enum HandSampleRenderer {
-    static let sentence = "哈利波特，真是个有趣的名字"
+    static let sentence = "见字如面，落墨为凭。"
     static let rowHeight: CGFloat = 64
     private static let rasterFontSize: CGFloat = 96
     private static let rasterLineWidth: CGFloat = 2.4
@@ -178,7 +178,7 @@ struct HandPickerView: View {
                                center: .center, startRadius: 200, endRadius: 900)
                     .ignoresSafeArea().allowsHitTesting(false)
 
-                Text("圈选一种字迹")
+                Text("以笔圈定一种字迹，我便用它回信")
                     .font(.custom(ReplyHands.xiaxing.fontName, size: 30))
                     .foregroundStyle(Color(Ink.quillColor))
                     .position(x: geo.size.width / 2, y: layoutTopY(containerSize: geo.size) + guideBlockHeight / 2)
