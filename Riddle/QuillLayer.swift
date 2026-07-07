@@ -1,6 +1,7 @@
 import UIKit
 
 /// 隐形的笔：把句子合成为笔画并逐笔写在纸上。
+@MainActor
 final class QuillLayer {
     private let host: UIView
     private let pageBounds: CGRect
@@ -19,7 +20,7 @@ final class QuillLayer {
 
     private func font(for text: String) -> UIFont {
         let hasCJK = text.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) }
-        let name = hasCJK ? "LXGWWenKai-Regular" : "DancingScript-Regular"
+        let name = hasCJK ? ReplyHandStore.shared.current.fontName : "DancingScript-Regular"
         return UIFont(name: name, size: rasterPx)!
     }
 
