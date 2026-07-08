@@ -48,31 +48,17 @@ enum HandSampleRenderer {
 
         let placements = GlyphLayout.layout(sentence, cellWidth: cellWidth, lineHeight: glyphSize * 1.3,
                                              maxWidth: .greatestFiniteMagnitude, origin: .zero)
+        // GlyphLayout.resolveTrajectoryStrokes holds the resolution logic shared with
+        // QuillLayer.writeViaBank (bank hit → page-mapped + humanized trajectory; miss →
+        // single-char font fallback) — see its doc.
         var allStrokes: [[CGPoint]] = []
         for placement in placements {
-            let char = placement.char
-            let variant = Int.random(in: 0..<2, using: &rng)
-            if let trajectory = bank.strokes(for: char, variant: variant) ?? bank.strokes(for: char, variant: 0) {
-                let mapped = trajectory.map { stroke in
-                    stroke.map { p in
-                        CGPoint(x: placement.topLeft.x + p.x * glyphSize, y: placement.topLeft.y + p.y * glyphSize)
-                    }
-                }
-                allStrokes.append(contentsOf: Script.humanize(mapped, using: &rng))
-            } else {
-                guard let font = UIFont(name: fallbackFontName, size: rasterFontSize) else { continue }
-                var mask = Script.rasterize(String(char), font: font)
-                Script.thin(&mask)
-                let simplified = Script.trace(mask).map { Script.simplify($0) }
-                guard !simplified.isEmpty else { continue }
-                let scale = glyphSize / font.lineHeight
-                let mapped = simplified.map { stroke in
-                    stroke.map { p in
-                        CGPoint(x: placement.topLeft.x + p.x * scale, y: placement.topLeft.y + p.y * scale)
-                    }
-                }
-                allStrokes.append(contentsOf: Script.humanize(mapped, using: &rng))
-            }
+            let strokes = GlyphLayout.resolveTrajectoryStrokes(
+                for: placement, bank: bank, trajectoryGlyphSize: glyphSize,
+                fallbackTargetHeight: glyphSize,
+                fallbackFont: UIFont(name: fallbackFontName, size: rasterFontSize),
+                rng: &rng)
+            allStrokes.append(contentsOf: strokes)
         }
         return rasterStrokes(allStrokes, inkColor: inkColor)
     }

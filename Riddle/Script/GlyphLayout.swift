@@ -1,4 +1,5 @@
 import CoreGraphics
+import UIKit
 
 /// Pure per-character cursor layout: lays out a string left-to-right at a fixed cell
 /// size, wrapping to the next line when a cell would overflow the available width or a
@@ -44,5 +45,53 @@ enum GlyphLayout {
             x += cellWidth
         }
         return placements
+    }
+
+    /// Resolves one glyph placement's page-mapped strokes for the SDT trajectory rendering path:
+    /// a bank trajectory (unit em-box → page coordinates anchored at `placement.topLeft`, scaled
+    /// by `trajectoryGlyphSize`, then humanized with the trajectory-calibrated jitter amplitude
+    /// 0.15 — see `Script.humanize`'s doc: its 0.4 default is calibrated for the font path's own
+    /// ~100+px raster scale and would be ~3x too heavy applied directly at trajectory scale) if
+    /// the bank has this character; otherwise a single-character font fallback (rasterize → thin
+    /// → trace → simplify → humanize at the *font path's own* default amplitude 0.4, applied while
+    /// still in raw raster-pixel space — matching how the font path itself calibrates jitter —
+    /// then scaled by `fallbackTargetHeight / font.lineHeight` and translated into page
+    /// coordinates the same way as the trajectory branch).
+    ///
+    /// Shared by `QuillLayer.writeViaBank` (animates the returned strokes stroke-by-stroke) and
+    /// `HandPickerView.HandSampleRenderer.renderTrajectory` (accumulates them into one static
+    /// image) — the only difference between those two callers is what they do with the strokes
+    /// afterward, not how the strokes are produced.
+    static func resolveTrajectoryStrokes<RNG: RandomNumberGenerator>(
+        for placement: Placement,
+        bank: HandBank,
+        trajectoryGlyphSize: CGFloat,
+        fallbackTargetHeight: CGFloat,
+        fallbackFont: @autoclosure () -> UIFont?,
+        rng: inout RNG
+    ) -> [[CGPoint]] {
+        let variant = Int.random(in: 0..<2, using: &rng)
+        if let trajectory = bank.strokes(for: placement.char, variant: variant) ?? bank.strokes(for: placement.char, variant: 0) {
+            let mapped = trajectory.map { stroke in
+                stroke.map { p in
+                    CGPoint(x: placement.topLeft.x + p.x * trajectoryGlyphSize,
+                            y: placement.topLeft.y + p.y * trajectoryGlyphSize)
+                }
+            }
+            return Script.humanize(mapped, amplitude: 0.15, using: &rng)
+        }
+
+        guard let font = fallbackFont() else { return [] }
+        var mask = Script.rasterize(String(placement.char), font: font)
+        Script.thin(&mask)
+        let simplified = Script.trace(mask).map { Script.simplify($0) }
+        guard !simplified.isEmpty else { return [] }
+        let humanized = Script.humanize(simplified, using: &rng)   // font path default amplitude (0.4), untouched
+        let scale = fallbackTargetHeight / font.lineHeight
+        return humanized.map { stroke in
+            stroke.map { p in
+                CGPoint(x: placement.topLeft.x + p.x * scale, y: placement.topLeft.y + p.y * scale)
+            }
+        }
     }
 }

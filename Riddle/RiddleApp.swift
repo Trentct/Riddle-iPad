@@ -6,8 +6,12 @@ struct RiddleApp: App {
     init() {
         // 手泽（SDT 轨迹字库）常驻内存一次；缺文件/损坏时 preload 内部吞下失败，bank(for:) 返回 nil，
         // QuillLayer/HandPickerView 全部回落字体，无需在此处理错误。
+        // 异步后台加载（两次 gunzip + 13,526 条记录 JSON 解码，解压后共 ~2.7MB），避免阻塞冷启动首帧；
+        // 加载完成前的任何渲染调用都会看到 bank(for:) 仍是 nil，天然落到已有的字体回落分支。
         if let bankStyle = ReplyHands.shouze.bankStyle {
-            HandBankStore.shared.preload(style: bankStyle)
+            Task.detached(priority: .userInitiated) {
+                await HandBankStore.shared.preloadAsync(style: bankStyle)
+            }
         }
     }
 

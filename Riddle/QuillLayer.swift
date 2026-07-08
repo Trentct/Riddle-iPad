@@ -92,34 +92,17 @@ final class QuillLayer {
 
         var delay: CFTimeInterval = 0
         for placement in placements {
-            let char = placement.char
-            let variant = Int.random(in: 0..<2, using: &rng)
-            if let trajectory = bank.strokes(for: char, variant: variant) ?? bank.strokes(for: char, variant: 0) {
-                // humanize()'s jitter amplitude is calibrated for pixel-scale coordinates (raster path
-                // glyphs are ~100+pt); trajectory points are unit em-box [0,1], so pre-scale to
-                // bankGlyphSize *before* humanizing — otherwise the default amplitude (0.4) is ~40% of
-                // the whole glyph and scrambles the character. Once pre-scaled, position with an
-                // identity transform (scale: 1) since the points are already in page-point units.
-                let localScale = trajectory.map { stroke in
-                    stroke.map { p in CGPoint(x: p.x * bankGlyphSize, y: p.y * bankGlyphSize) }
-                }
-                let humanized = Script.humanize(localScale, using: &rng)
-                for stroke in humanized {
-                    addAnimatedStroke(stroke, scale: 1, position: placement.topLeft,
-                                       rng: &rng, delay: &delay)
-                }
-            } else {
-                let font = fallbackFont(for: char, cjkFontName: fallbackHandFontName)
-                var mask = Script.rasterize(String(char), font: font)
-                Script.thin(&mask)
-                let simplified = Script.trace(mask).map { Script.simplify($0) }
-                guard !simplified.isEmpty else { continue }
-                let humanized = Script.humanize(simplified, using: &rng)
-                let scale = lineHeightOnPage / font.lineHeight
-                for stroke in humanized {
-                    addAnimatedStroke(stroke, scale: scale, position: placement.topLeft,
-                                       rng: &rng, delay: &delay)
-                }
+            // GlyphLayout.resolveTrajectoryStrokes already returns fully page-mapped (scaled +
+            // translated) and humanized points — same resolution logic HandPickerView's
+            // renderTrajectory uses, see its doc — so each stroke is animated with an identity
+            // transform (scale: 1, position: .zero).
+            let strokes = GlyphLayout.resolveTrajectoryStrokes(
+                for: placement, bank: bank, trajectoryGlyphSize: bankGlyphSize,
+                fallbackTargetHeight: lineHeightOnPage,
+                fallbackFont: fallbackFont(for: placement.char, cjkFontName: fallbackHandFontName),
+                rng: &rng)
+            for stroke in strokes {
+                addAnimatedStroke(stroke, scale: 1, position: .zero, rng: &rng, delay: &delay)
             }
         }
 
