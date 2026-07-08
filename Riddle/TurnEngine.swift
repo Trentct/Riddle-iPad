@@ -10,6 +10,7 @@ final class TurnEngine {
     private let canvasView: PKCanvasView
     private let overlayHost: UIView
     private let oracle = Oracle()
+    private let usageStore: UsageStore
     private var quill: QuillLayer?
     private var idleTimer: Timer?
     private var lingerTask: Task<Void, Never>?
@@ -17,12 +18,19 @@ final class TurnEngine {
     /// 回合代号：抢占时自增，旧回合的异步续体自检后静默退场。
     private var turnID = 0
 
+    /// 配额耗尽时触发（客户端免费额度用尽，或后端返回 402）——由持有者（DiaryView）设置，
+    /// 用来弹出付费页；TurnEngine 本身不知道 UI 怎么展示，只负责在正确的时机喊一声。
+    var onQuotaExceeded: (() -> Void)?
+
     static let idleInterval: TimeInterval = 1.8
     static let lingerSeconds: TimeInterval = 5
 
-    init(canvasView: PKCanvasView, overlayHost: UIView) {
+    /// `usageStore` 默认 nil，在方法体内（已经在 MainActor 上）才落到 `.shared`——同样的理由见
+    /// Oracle.init 的 historyStore：默认参数表达式本身在非隔离上下文求值，不能直接引用 @MainActor 静态属性。
+    init(canvasView: PKCanvasView, overlayHost: UIView, usageStore: UsageStore? = nil) {
         self.canvasView = canvasView
         self.overlayHost = overlayHost
+        self.usageStore = usageStore ?? .shared
     }
 
     /// InkCanvas 每次笔迹变化时调用。
@@ -51,6 +59,13 @@ final class TurnEngine {
 
     private func commitPage() {
         guard state == .writing else { return }
+        // 免费额度门控：在真正提交这一页（drink 动画、发给模型）之前检查，用户的笔迹原样留在纸上，
+        // 不消耗、不发送——只是让回信让位给付费页。
+        guard usageStore.canSendReply else {
+            state = .idle
+            onQuotaExceeded?()
+            return
+        }
         state = .drinking
         let bounds = canvasView.bounds
         let drawing = canvasView.drawing
@@ -82,7 +97,16 @@ final class TurnEngine {
                 }
                 guard self.turnID == myTurn else { return }
                 self.oracle.recordReply(replyText)
+                self.usageStore.recordReply()
                 self.startLinger(for: myTurn)
+            } catch OracleError.quotaExceeded {
+                // 配额耗尽（防御性：本地门控放过了但服务端拒绝，或后端模式下服务端先一步发现）——
+                // 让位给付费页，不在人设内写错误字，也不进入 lingering。
+                guard self.turnID == myTurn else { return }
+                quill.fadeOutAll {}
+                self.quill = nil
+                self.state = .idle
+                self.onQuotaExceeded?()
             } catch {
                 // 抢占取消不写错误字；真实失败才在人设内表达
                 guard self.turnID == myTurn else { return }

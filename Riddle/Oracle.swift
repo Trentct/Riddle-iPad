@@ -23,6 +23,19 @@ struct SentenceSplitter {
     }
 }
 
+/// Oracle 抛出的、需要被上层（TurnEngine/UI）特殊处理的错误——目前只有配额耗尽会触发付费页。
+enum OracleError: Error, Equatable {
+    case quotaExceeded
+
+    /// 把 HTTP 状态码映射成"是否要特殊处理"的判定，纯函数，便于单测断言 402→quotaExceeded
+    /// 而不必真的起一个服务器。200 返回 nil（正常往下走流式解析），其余非 200 抛通用网络错误。
+    static func forStatusCode(_ code: Int) -> Error? {
+        if code == 402 { return OracleError.quotaExceeded }
+        if code != 200 { return URLError(.badServerResponse) }
+        return nil
+    }
+}
+
 enum SSE {
     private struct Chunk: Decodable {
         struct Choice: Decodable {
@@ -108,25 +121,17 @@ final class Oracle {
         persistedLog.append(PersistedTurn(role: "user", text: "(手写)"))
         let messages = history
 
+        let prompt = systemPrompt()
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    var req = URLRequest(url: URL(string: Secrets.baseURL + "/chat/completions")!)
-                    req.httpMethod = "POST"
-                    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                    req.setValue("Bearer \(Secrets.apiKey)", forHTTPHeaderField: "Authorization")
-                    let body: [String: Any] = [
-                        "model": Secrets.model,
-                        "stream": true,
-                        "max_tokens": 512,
-                        "messages": [["role": "system", "content": systemPrompt()]] + messages,
-                    ]
-                    req.httpBody = try JSONSerialization.data(withJSONObject: body)
-                    req.timeoutInterval = 60
-
+                    let req = try Self.buildRequest(messages: messages, systemPrompt: prompt)
                     let (bytes, response) = try await URLSession.shared.bytes(for: req)
-                    guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                    guard let http = response as? HTTPURLResponse else {
                         throw URLError(.badServerResponse)
+                    }
+                    if let statusError = OracleError.forStatusCode(http.statusCode) {
+                        throw statusError
                     }
                     var splitter = SentenceSplitter()
                     for try await line in bytes.lines {
@@ -142,6 +147,43 @@ final class Oracle {
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// 构造发给模型/后端的请求——两条路径的唯一分叉点，其余流式解析/句子切分/历史记账完全不变。
+    /// `useBackend` 默认读 `AppConfig.useBackend`，可在测试里显式传入以断言请求形状而不必真的发网络请求。
+    /// 契约见 riddle-backend/docs/APP_INTEGRATION.md：直连路径字节级不变（冒烟测试的前提），
+    /// 后端路径换 URL/鉴权头/瘦身 body，流式解析下游（SSE.parseLine/SentenceSplitter）无需改动。
+    static func buildRequest(messages: [[String: Any]], systemPrompt: String,
+                             useBackend: Bool = AppConfig.useBackend) throws -> URLRequest {
+        if useBackend {
+            var req = URLRequest(url: URL(string: Secrets.backendURL + "/v1/reply")!)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.setValue("Bearer \(Secrets.appSharedSecret)", forHTTPHeaderField: "Authorization")
+            req.setValue(DeviceId.current, forHTTPHeaderField: "X-Device-Id")
+            let body: [String: Any] = [
+                "system": systemPrompt,
+                "max_tokens": 512,
+                "messages": messages,
+            ]
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+            req.timeoutInterval = 60
+            return req
+        } else {
+            var req = URLRequest(url: URL(string: Secrets.baseURL + "/chat/completions")!)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.setValue("Bearer \(Secrets.apiKey)", forHTTPHeaderField: "Authorization")
+            let body: [String: Any] = [
+                "model": Secrets.model,
+                "stream": true,
+                "max_tokens": 512,
+                "messages": [["role": "system", "content": systemPrompt]] + messages,
+            ]
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+            req.timeoutInterval = 60
+            return req
         }
     }
 

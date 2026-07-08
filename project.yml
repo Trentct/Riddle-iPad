@@ -9,13 +9,15 @@ targets:
     type: application
     platform: iOS
     deploymentTarget: "17.0"
-    sources: [Riddle]
+    sources: [Riddle, Configuration.storekit]
     settings:
       base:
         TARGETED_DEVICE_FAMILY: 2
         SWIFT_VERSION: 5.9
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - sdk: StoreKit.framework
     info:
       path: Riddle/Info.plist
       properties:
@@ -28,11 +30,14 @@ targets:
         MOONSHOT_API_KEY: $(MOONSHOT_API_KEY)
         MOONSHOT_BASE_URL: $(MOONSHOT_BASE_URL)
         MOONSHOT_MODEL: $(MOONSHOT_MODEL)
+        USE_BACKEND: $(USE_BACKEND)
+        BACKEND_URL: $(BACKEND_URL)
+        APP_SHARED_SECRET: $(APP_SHARED_SECRET)
   RiddleTests:
     type: bundle.unit-test
     platform: iOS
     deploymentTarget: "17.0"
-    sources: [RiddleTests]
+    sources: [RiddleTests, Configuration.storekit]
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
@@ -44,3 +49,6 @@ schemes:
       targets: { Riddle: all, RiddleTests: [test] }
     test:
       targets: [RiddleTests]
+    run:
+      config: Debug
+      storeKitConfiguration: Configuration.storekit

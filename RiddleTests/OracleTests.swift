@@ -59,6 +59,65 @@ final class OracleTests: XCTestCase {
         XCTAssertFalse(Oracle().systemPrompt().contains("Reply ONLY in English."))
     }
 
+    // MARK: - buildRequest：直连 Moonshot 路径必须与冒烟测试之前的行为字节级一致；
+    // 后端路径按 riddle-backend/docs/APP_INTEGRATION.md 的契约断言请求形状，不需要真的连后端。
+
+    @MainActor
+    func testBuildRequestDirectMoonshotPathUnchanged() throws {
+        let messages: [[String: Any]] = [["role": "user", "content": "hi"]]
+        let req = try Oracle.buildRequest(messages: messages, systemPrompt: "你是归野", useBackend: false)
+
+        XCTAssertEqual(req.url?.absoluteString, Secrets.baseURL + "/chat/completions")
+        XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer \(Secrets.apiKey)")
+        XCTAssertNil(req.value(forHTTPHeaderField: "X-Device-Id"))
+
+        let body = try XCTUnwrap(req.httpBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["model"] as? String, Secrets.model)
+        XCTAssertEqual(json["stream"] as? Bool, true)
+        let sentMessages = try XCTUnwrap(json["messages"] as? [[String: Any]])
+        XCTAssertEqual(sentMessages.first?["role"] as? String, "system")
+    }
+
+    @MainActor
+    func testBuildRequestBackendPathShapedPerContract() throws {
+        let messages: [[String: Any]] = [["role": "user", "content": "hi"]]
+        let req = try Oracle.buildRequest(messages: messages, systemPrompt: "你是归野", useBackend: true)
+
+        XCTAssertEqual(req.url?.absoluteString, Secrets.backendURL + "/v1/reply")
+        XCTAssertEqual(req.httpMethod, "POST")
+        XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer \(Secrets.appSharedSecret)")
+        XCTAssertEqual(req.value(forHTTPHeaderField: "X-Device-Id"), DeviceId.current)
+        XCTAssertEqual(req.value(forHTTPHeaderField: "Content-Type"), "application/json")
+
+        let body = try XCTUnwrap(req.httpBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        // system 是独立顶层字段，不再拼进 messages 数组；model 不再由 App 发送。
+        XCTAssertEqual(json["system"] as? String, "你是归野")
+        XCTAssertNil(json["model"])
+        let sentMessages = try XCTUnwrap(json["messages"] as? [[String: Any]])
+        XCTAssertEqual(sentMessages.count, messages.count)
+        XCTAssertEqual(sentMessages.first?["role"] as? String, "user")
+    }
+
+    func testDeviceIdIsStableAcrossCalls() {
+        XCTAssertEqual(DeviceId.current, DeviceId.current)
+    }
+
+    func test402MapsToQuotaExceeded() {
+        XCTAssertEqual(OracleError.forStatusCode(402) as? OracleError, .quotaExceeded)
+    }
+
+    func test200MapsToNoError() {
+        XCTAssertNil(OracleError.forStatusCode(200))
+    }
+
+    func testOtherNon200MapsToGenericError() {
+        let error = OracleError.forStatusCode(500)
+        XCTAssertNotNil(error)
+        XCTAssertNil(error as? OracleError)
+    }
+
     @MainActor
     func testOracleSmoke() async throws {
         try XCTSkipIf(Secrets.apiKey.isEmpty || Secrets.apiKey.contains("换成"), "未配置 key")

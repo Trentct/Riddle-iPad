@@ -24,6 +24,12 @@
 	<string>$(MOONSHOT_BASE_URL)</string>
 	<key>MOONSHOT_MODEL</key>
 	<string>$(MOONSHOT_MODEL)</string>
+	<key>USE_BACKEND</key>
+	<string>$(USE_BACKEND)</string>
+	<key>BACKEND_URL</key>
+	<string>$(BACKEND_URL)</string>
+	<key>APP_SHARED_SECRET</key>
+	<string>$(APP_SHARED_SECRET)</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>DancingScript-Regular.ttf</string>

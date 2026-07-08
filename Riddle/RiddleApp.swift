@@ -55,4 +55,8 @@ enum Secrets {
     static var apiKey: String { Bundle.main.object(forInfoDictionaryKey: "MOONSHOT_API_KEY") as? String ?? "" }
     static var baseURL: String { Bundle.main.object(forInfoDictionaryKey: "MOONSHOT_BASE_URL") as? String ?? "" }
     static var model: String { Bundle.main.object(forInfoDictionaryKey: "MOONSHOT_MODEL") as? String ?? "" }
+    /// riddle-backend 代理地址与 App 级共享密钥（软保护，见 riddle-backend README "Security honest-truth"）——
+    /// 只在 AppConfig.useBackend 为 true 时使用，dev 默认路径不读取这两个值。
+    static var backendURL: String { Bundle.main.object(forInfoDictionaryKey: "BACKEND_URL") as? String ?? "" }
+    static var appSharedSecret: String { Bundle.main.object(forInfoDictionaryKey: "APP_SHARED_SECRET") as? String ?? "" }
 }

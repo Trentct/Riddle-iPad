@@ -27,6 +27,8 @@ struct DiaryView: View {
     @ObservedObject private var handStore = ReplyHandStore.shared
     @ObservedObject private var onboardingStore = OnboardingStore.shared
     @StateObject private var handCache = HandSampleCache.shared
+    @StateObject private var storeManager = StoreManager.shared
+    @State private var showPaywall = false
     /// 落款的命中区域（已含圈选容错），供 `checkSignatureCircle` 判定；随容器尺寸/角色/缓存就绪重算。
     @State private var signatureFrame: CGRect = .zero
     @State private var signatureCheckTask: Task<Void, Never>?
@@ -85,7 +87,9 @@ struct DiaryView: View {
             .onAppear {
                 let firstAppear = engine == nil
                 if engine == nil {
-                    engine = TurnEngine(canvasView: canvasView, overlayHost: overlayHost)
+                    let newEngine = TurnEngine(canvasView: canvasView, overlayHost: overlayHost)
+                    newEngine.onQuotaExceeded = { showPaywall = true }
+                    engine = newEngine
                 }
                 // 正常流程里 HandPickerView 总是先出现过、早已 warm() 好缓存；这里再调一次是防御性的——
                 // warm() 内部按 started 去重，已热过时直接返回，不会重复渲染。
@@ -106,6 +110,9 @@ struct DiaryView: View {
         .ignoresSafeArea()
         .persistentSystemOverlays(.hidden)
         .statusBarHidden(true)
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(onDismiss: { showPaywall = false }, store: storeManager)
+        }
     }
 
     /// 纸面右下角常驻的当前角色落款：用其自己的字迹渲染（复用 HandSampleCache，跟圈选页三行同一份缓存），

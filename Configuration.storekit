@@ -1,0 +1,31 @@
+{
+  "identifier" : "0ADF866D-490F-4696-AB3E-41CCFBFA1DF2",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "68.00",
+      "familyShareable" : false,
+      "internalID" : "33F82D68-886F-4F6A-A6A3-90B1087E2895",
+      "localizations" : [
+        {
+          "description" : "解锁无限次回信，纸与笔不再有尽头。",
+          "displayName" : "解锁无限",
+          "locale" : "zh_Hans"
+        }
+      ],
+      "productID" : "com.trent.Riddle.unlimited",
+      "referenceName" : "解锁无限（终身）",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0",
+    "_developerTeamID" : "0000000000",
+    "_lastSynchronizedDate" : 0
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
