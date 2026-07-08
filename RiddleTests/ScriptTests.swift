@@ -111,4 +111,21 @@ final class ScriptTests: XCTestCase {
         let tiny: [[CGPoint]] = [[CGPoint(x: 0, y: 0)]]
         XCTAssertEqual(Script.humanize(tiny, using: &rng)[0].count, 1)
     }
+
+    func testSimplifyRemovesCollinearZigzag() {
+        // 直线上叠加 ±0.5px 锯齿的 60 点 → 抽稀后应大幅减点且首尾保留
+        let noisy: [CGPoint] = (0..<60).map { CGPoint(x: CGFloat($0), y: $0 % 2 == 0 ? 0.5 : -0.5) }
+        let out = Script.simplify(noisy, epsilon: 1.2)
+        XCTAssertLessThan(out.count, 10)
+        XCTAssertEqual(out.first, noisy.first)
+        XCTAssertEqual(out.last, noisy.last)
+    }
+
+    func testSimplifyPreservesCorners() {
+        // L 形拐角必须保留
+        var pts: [CGPoint] = (0...20).map { CGPoint(x: CGFloat($0), y: 0) }
+        pts += (1...20).map { CGPoint(x: 20, y: CGFloat($0)) }
+        let out = Script.simplify(pts, epsilon: 1.2)
+        XCTAssertTrue(out.contains(CGPoint(x: 20, y: 0)), "拐角点丢失")
+    }
 }

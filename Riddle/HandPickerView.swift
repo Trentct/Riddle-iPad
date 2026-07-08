@@ -32,7 +32,8 @@ enum HandSampleRenderer {
         var mask = Script.rasterize(sentence, font: font)
         Script.thin(&mask)
         var rng = SystemRandomNumberGenerator()
-        let strokes = Script.humanize(Script.trace(mask), using: &rng)
+        let simplified = Script.trace(mask).map { Script.simplify($0) }
+        let strokes = Script.humanize(simplified, using: &rng)
         let points = strokes.flatMap { $0 }
         guard !points.isEmpty else { return UIImage() }
 
@@ -49,10 +50,9 @@ enum HandSampleRenderer {
             cg.setLineCap(.round)
             cg.setLineJoin(.round)
             for stroke in strokes {
-                guard let first = stroke.first else { continue }
+                guard !stroke.isEmpty else { continue }
                 cg.beginPath()
-                cg.move(to: first)
-                for p in stroke.dropFirst() { cg.addLine(to: p) }
+                cg.addPath(Script.smoothPath(stroke))
                 cg.strokePath()
             }
         }

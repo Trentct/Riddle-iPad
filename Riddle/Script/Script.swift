@@ -110,6 +110,52 @@ enum Script {
         return strokes
     }
 
+    /// Ramer–Douglas–Peucker 抽稀：去除像素级锯齿点，保留笔画形态。
+    static func simplify(_ stroke: [CGPoint], epsilon: CGFloat = 1.2) -> [CGPoint] {
+        guard stroke.count > 2 else { return stroke }
+        func perpDistance(_ p: CGPoint, _ a: CGPoint, _ b: CGPoint) -> CGFloat {
+            let dx = b.x - a.x, dy = b.y - a.y
+            let len = hypot(dx, dy)
+            guard len > 0 else { return hypot(p.x - a.x, p.y - a.y) }
+            return abs(dy * p.x - dx * p.y + b.x * a.y - b.y * a.x) / len
+        }
+        var keep = [Bool](repeating: false, count: stroke.count)
+        keep[0] = true; keep[stroke.count - 1] = true
+        var stack = [(0, stroke.count - 1)]
+        while let (lo, hi) = stack.popLast() {
+            guard hi > lo + 1 else { continue }
+            var maxD: CGFloat = 0, maxI = lo
+            for i in (lo + 1)..<hi {
+                let d = perpDistance(stroke[i], stroke[lo], stroke[hi])
+                if d > maxD { maxD = d; maxI = i }
+            }
+            if maxD > epsilon {
+                keep[maxI] = true
+                stack.append((lo, maxI)); stack.append((maxI, hi))
+            }
+        }
+        return stroke.indices.compactMap { keep[$0] ? stroke[$0] : nil }
+    }
+
+    /// 中点二次曲线平滑：把折线转成过中点的贝塞尔曲线路径，消除骨架追踪的像素锯齿观感。
+    /// QuillLayer（动画书写）与 HandPickerView.HandSampleRenderer（静态样字预渲染）共用此构造，保持视觉一致。
+    static func smoothPath(_ points: [CGPoint]) -> CGPath {
+        let path = CGMutablePath()
+        guard let first = points.first else { return path }
+        path.move(to: first)
+        guard points.count > 2 else {
+            points.dropFirst().forEach { path.addLine(to: $0) }
+            return path
+        }
+        for i in 1..<(points.count - 1) {
+            let mid = CGPoint(x: (points[i].x + points[i + 1].x) / 2,
+                              y: (points[i].y + points[i + 1].y) / 2)
+            path.addQuadCurve(to: mid, control: points[i])
+        }
+        path.addLine(to: points[points.count - 1])
+        return path
+    }
+
     static func measure(_ text: String, font: UIFont) -> CGFloat {
         NSAttributedString(string: text, attributes: [.font: font]).size().width
     }

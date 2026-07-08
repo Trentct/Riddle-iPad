@@ -35,17 +35,14 @@ final class QuillLayer {
             var mask = Script.rasterize(line, font: f)
             Script.thin(&mask)
             var rng = SystemRandomNumberGenerator()
-            let strokes = Script.humanize(Script.trace(mask), using: &rng)
+            let simplified = Script.trace(mask).map { Script.simplify($0) }
+            let strokes = Script.humanize(simplified, using: &rng)
             let lineY = cursorY
             cursorY += lineHeightOnPage
 
             for stroke in strokes {
-                let path = UIBezierPath()
-                path.move(to: stroke[0])
-                for p in stroke.dropFirst() { path.addLine(to: p) }
-
                 let layer = CAShapeLayer()
-                layer.path = path.cgPath
+                layer.path = Script.smoothPath(stroke)
                 let randomAlpha = CGFloat.random(in: 0.85...1.0, using: &rng)
                 layer.strokeColor = UIColor(cgColor: inkColor).withAlphaComponent(randomAlpha).cgColor
                 layer.fillColor = nil
