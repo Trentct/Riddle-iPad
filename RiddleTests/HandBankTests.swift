@@ -87,6 +87,28 @@ final class HandBankTests: XCTestCase {
         XCTAssertNil(bank.strokes(for: "哈", variant: 99))
     }
 
+    func testTruncatedRecordReturnsNil() {
+        // Build a deliberately truncated record: n_strokes=1, n_points=10, but only 3 points of data
+        // Structure: [1 byte n_strokes] [2 bytes n_points] [3 points = 12 bytes, out of 40 needed]
+        var truncatedRecord = [UInt8]()
+        truncatedRecord.append(1)  // n_strokes = 1
+        truncatedRecord.append(10) // n_points = 10 (little-endian, low byte)
+        truncatedRecord.append(0)  // n_points = 10 (little-endian, high byte)
+        // Add only 3 points worth of data (12 bytes) instead of 10 points (40 bytes)
+        for i in 0..<3 {
+            let x = UInt16(i * 1000)
+            let y = UInt16(i * 2000)
+            truncatedRecord.append(UInt8(x & 0xff))
+            truncatedRecord.append(UInt8((x >> 8) & 0xff))
+            truncatedRecord.append(UInt8(y & 0xff))
+            truncatedRecord.append(UInt8((y >> 8) & 0xff))
+        }
+        // At this point, truncatedRecord has 17 bytes (1 + 2 + 3*4), but parser expects 1 + 2 + 10*4 = 43 bytes
+
+        // Verify that decoding this truncated record returns nil rather than crashing
+        XCTAssertNil(HandBank.decodeRecord(truncatedRecord))
+    }
+
     // MARK: - Test helpers
 
     /// Builds a standards-conformant gzip byte stream (10-byte header, FLG=0, raw

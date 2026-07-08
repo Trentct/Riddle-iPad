@@ -150,6 +150,43 @@ struct HandBank {
         index[String(char)] != nil
     }
 
+    /// Decodes a single record (one variant's trajectory data) from raw bytes.
+    /// Performs bounds checking at each read to ensure truncated or malformed records
+    /// return nil rather than crashing. Returns nil if the record is truncated.
+    static func decodeRecord(_ bytes: [UInt8]) -> [[CGPoint]]? {
+        var cursor = 0
+
+        // Read n_strokes (1 byte)
+        guard cursor + 1 <= bytes.count else { return nil }
+        let nStrokes = Int(bytes[cursor])
+        cursor += 1
+
+        var strokes: [[CGPoint]] = []
+        strokes.reserveCapacity(nStrokes)
+
+        for _ in 0..<nStrokes {
+            // Read n_points (2 bytes, little-endian)
+            guard cursor + 2 <= bytes.count else { return nil }
+            let nPts = Int(bytes[cursor]) | (Int(bytes[cursor + 1]) << 8)
+            cursor += 2
+
+            var pts: [CGPoint] = []
+            pts.reserveCapacity(nPts)
+
+            for _ in 0..<nPts {
+                // Read (xq, yq) = 4 bytes total
+                guard cursor + 4 <= bytes.count else { return nil }
+                let xq = UInt16(bytes[cursor]) | (UInt16(bytes[cursor + 1]) << 8)
+                let yq = UInt16(bytes[cursor + 2]) | (UInt16(bytes[cursor + 3]) << 8)
+                cursor += 4
+
+                pts.append(CGPoint(x: Double(xq) / 65535.0, y: Double(yq) / 65535.0))
+            }
+            strokes.append(pts)
+        }
+        return strokes
+    }
+
     /// Returns `char`'s `variant`-th trajectory as arrays of unit-em-box CGPoints
     /// (x, y both in [0,1]), one inner array per stroke, points in stroke order.
     /// Returns nil if the char isn't in the bank or `variant` is out of range.
@@ -159,30 +196,6 @@ struct HandBank {
         guard ref.offset >= 0, ref.length >= 0, ref.offset + ref.length <= binData.count else { return nil }
 
         let bytes = [UInt8](binData[ref.offset..<(ref.offset + ref.length)])
-        var cursor = 0
-        func readU8() -> UInt8 {
-            defer { cursor += 1 }
-            return bytes[cursor]
-        }
-        func readU16() -> UInt16 {
-            defer { cursor += 2 }
-            return UInt16(bytes[cursor]) | (UInt16(bytes[cursor + 1]) << 8)
-        }
-
-        let nStrokes = Int(readU8())
-        var strokes: [[CGPoint]] = []
-        strokes.reserveCapacity(nStrokes)
-        for _ in 0..<nStrokes {
-            let nPts = Int(readU16())
-            var pts: [CGPoint] = []
-            pts.reserveCapacity(nPts)
-            for _ in 0..<nPts {
-                let xq = readU16()
-                let yq = readU16()
-                pts.append(CGPoint(x: Double(xq) / 65535.0, y: Double(yq) / 65535.0))
-            }
-            strokes.append(pts)
-        }
-        return strokes
+        return Self.decodeRecord(bytes)
     }
 }
