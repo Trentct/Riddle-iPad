@@ -34,6 +34,52 @@ enum HandSampleRenderer {
         var rng = SystemRandomNumberGenerator()
         let simplified = Script.trace(mask).map { Script.simplify($0) }
         let strokes = Script.humanize(simplified, using: &rng)
+        return rasterStrokes(strokes, inkColor: inkColor)
+    }
+
+    /// 手泽（SDT 轨迹字库驱动）的样字渲染：与字体款共用 `GlyphLayout` 的逐字光标（QuillLayer 的
+    /// `writeViaBank` 也用同一套排版数学），确保圈选页第六行展示的就是真实轨迹笔迹，而不是字体骨架化。
+    /// 字库里没有的字符（这里主要是标点「，」「。」）单字回落到字体路径。
+    static func renderTrajectory(bank: HandBank, fallbackFontName: String, inkColor: CGColor) -> UIImage {
+        let glyphSize = rasterFontSize             // 与字体款用同一光栅尺度，人味化幅度才可比
+        let charSpacing = glyphSize * 0.15
+        let cellWidth = glyphSize + charSpacing
+        var rng = SystemRandomNumberGenerator()
+
+        let placements = GlyphLayout.layout(sentence, cellWidth: cellWidth, lineHeight: glyphSize * 1.3,
+                                             maxWidth: .greatestFiniteMagnitude, origin: .zero)
+        var allStrokes: [[CGPoint]] = []
+        for placement in placements {
+            let char = placement.char
+            let variant = Int.random(in: 0..<2, using: &rng)
+            if let trajectory = bank.strokes(for: char, variant: variant) ?? bank.strokes(for: char, variant: 0) {
+                let mapped = trajectory.map { stroke in
+                    stroke.map { p in
+                        CGPoint(x: placement.topLeft.x + p.x * glyphSize, y: placement.topLeft.y + p.y * glyphSize)
+                    }
+                }
+                allStrokes.append(contentsOf: Script.humanize(mapped, using: &rng))
+            } else {
+                guard let font = UIFont(name: fallbackFontName, size: rasterFontSize) else { continue }
+                var mask = Script.rasterize(String(char), font: font)
+                Script.thin(&mask)
+                let simplified = Script.trace(mask).map { Script.simplify($0) }
+                guard !simplified.isEmpty else { continue }
+                let scale = glyphSize / font.lineHeight
+                let mapped = simplified.map { stroke in
+                    stroke.map { p in
+                        CGPoint(x: placement.topLeft.x + p.x * scale, y: placement.topLeft.y + p.y * scale)
+                    }
+                }
+                allStrokes.append(contentsOf: Script.humanize(mapped, using: &rng))
+            }
+        }
+        return rasterStrokes(allStrokes, inkColor: inkColor)
+    }
+
+    /// 共享的笔画→图片光栅化：按笔画包围盒裁边，再等比缩放到目标行高。`render` 与 `renderTrajectory`
+    /// 都以此收尾，保证两条数据源出来的样字图片视觉规格（线宽/边距/最终行高）一致。
+    private static func rasterStrokes(_ strokes: [[CGPoint]], inkColor: CGColor) -> UIImage {
         let points = strokes.flatMap { $0 }
         guard !points.isEmpty else { return UIImage() }
 
@@ -66,7 +112,7 @@ enum HandSampleRenderer {
     }
 }
 
-/// 四款样字图片的缓存：首次 warm() 时在后台线程一次性渲染，避免卡顿启动首帧。
+/// 六款样字图片的缓存：首次 warm() 时在后台线程一次性渲染，避免卡顿启动首帧。
 @MainActor
 final class HandSampleCache: ObservableObject {
     static let shared = HandSampleCache()
@@ -77,9 +123,20 @@ final class HandSampleCache: ObservableObject {
         guard !started else { return }
         started = true
         let inkColor = Ink.quillColor.cgColor
+        // bank(for:) 是 @MainActor 同步调用（HandSampleCache 本身也是 @MainActor），在派发到后台渲染前
+        // 先在主线程把已加载（或按需加载）的 HandBank 取出来，交给下面的 detached task 做重活。
+        let banks = Dictionary(uniqueKeysWithValues: ReplyHands.all.compactMap { hand -> (String, HandBank)? in
+            guard let bankStyle = hand.bankStyle, let bank = HandBankStore.shared.bank(for: bankStyle) else { return nil }
+            return (hand.id, bank)
+        })
         Task.detached(priority: .userInitiated) {
-            let result = Dictionary(uniqueKeysWithValues: ReplyHands.all.map { hand in
-                (hand.id, HandSampleRenderer.render(hand, inkColor: inkColor))
+            let result = Dictionary(uniqueKeysWithValues: ReplyHands.all.map { hand -> (String, UIImage) in
+                if let bank = banks[hand.id] {
+                    let image = HandSampleRenderer.renderTrajectory(bank: bank, fallbackFontName: hand.fontName,
+                                                                     inkColor: inkColor)
+                    return (hand.id, image)
+                }
+                return (hand.id, HandSampleRenderer.render(hand, inkColor: inkColor))
             })
             await MainActor.run { self.images = result }
         }

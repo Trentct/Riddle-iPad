@@ -1,6 +1,12 @@
 import UIKit
 
 /// 隐形的笔：把句子合成为笔画并逐笔写在纸上。
+///
+/// 两条数据源路径：
+/// - 字体骨架化（现有五款手迹）：整行光栅化→细化→追踪→抽稀→人味化，`writeViaFont`。
+/// - SDT 轨迹（手泽）：逐字判断字库是否含该字，含则直接取轨迹点做人味化+曲线平滑；
+///   字库外的字（标点/数字/生僻字/拉丁）单字回落到字体路径，`writeViaBank`。
+///   两路共用同一套逐字光标（`GlyphLayout`），保证混排时标点与轨迹字同一基线、同一推进节奏。
 @MainActor
 final class QuillLayer {
     private let host: UIView
@@ -11,6 +17,10 @@ final class QuillLayer {
     private let lineHeightOnPage: CGFloat = 44    // 页面上的行高
     private let margin: CGFloat = 80
     private let inkColor: CGColor = Ink.quillColor.cgColor   // 回合开始时定色，换纸不影响写到一半的回信
+
+    /// 轨迹字的固定视觉尺寸：贴近字体路径缩放到 lineHeightOnPage 后的字高观感。
+    private let bankGlyphSize: CGFloat = 40
+    private let bankCharSpacing: CGFloat = 6
 
     init(host: UIView, pageBounds: CGRect) {
         self.host = host
@@ -24,54 +34,133 @@ final class QuillLayer {
         return UIFont(name: name, size: rasterPx)!
     }
 
+    /// 单字回落字体：CJK 用手迹自带字体，非 CJK（拉丁/数字）用手写体，与 `font(for:)` 的整行判断同一逻辑，
+    /// 只是缩小到单字粒度，供轨迹路径里字库外的字符使用。
+    private func fallbackFont(for char: Character, cjkFontName: String) -> UIFont {
+        let isCJK = char.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) }
+        let name = isCJK ? cjkFontName : "DancingScript-Regular"
+        return UIFont(name: name, size: rasterPx) ?? UIFont(name: cjkFontName, size: rasterPx) ?? UIFont.systemFont(ofSize: rasterPx)
+    }
+
     func write(_ sentence: String, completion: @escaping () -> Void) {
+        let hand = ReplyHandStore.shared.current
+        if let bankStyle = hand.bankStyle, let bank = HandBankStore.shared.bank(for: bankStyle) {
+            writeViaBank(sentence, bank: bank, fallbackHandFontName: hand.fontName, completion: completion)
+        } else {
+            writeViaFont(sentence, completion: completion)
+        }
+    }
+
+    /// 现有字体骨架化路径：整行光栅化→细化→追踪→抽稀→人味化。字体款（现有五款）与手泽遇字库外整行
+    /// （理论上不会整行都在库外，但结构上仍走得通）都走这里。逻辑与 Task 2 之前完全一致，未改动。
+    private func writeViaFont(_ sentence: String, completion: @escaping () -> Void) {
         let f = font(for: sentence)
         let scaleDown = lineHeightOnPage / rasterPx * (rasterPx / f.lineHeight) // 归一到行高
         let maxRasterWidth = (pageBounds.width - margin * 2) / scaleDown
         let lines = Script.wrap(sentence, font: f, maxWidth: maxRasterWidth)
 
         var delay: CFTimeInterval = 0
+        var rng = SystemRandomNumberGenerator()
         for line in lines {
             var mask = Script.rasterize(line, font: f)
             Script.thin(&mask)
-            var rng = SystemRandomNumberGenerator()
             let simplified = Script.trace(mask).map { Script.simplify($0) }
             let strokes = Script.humanize(simplified, using: &rng)
             let lineY = cursorY
             cursorY += lineHeightOnPage
 
             for stroke in strokes {
-                let layer = CAShapeLayer()
-                layer.path = Script.smoothPath(stroke)
-                let randomAlpha = CGFloat.random(in: 0.85...1.0, using: &rng)
-                layer.strokeColor = UIColor(cgColor: inkColor).withAlphaComponent(randomAlpha).cgColor
-                layer.fillColor = nil
-                layer.lineWidth = CGFloat.random(in: 1.8...2.6, using: &rng) / scaleDown
-                layer.lineCap = .round
-                layer.lineJoin = .round
-                // 缩放 + 平移到页面位置
-                layer.setAffineTransform(CGAffineTransform(scaleX: scaleDown, y: scaleDown))
-                layer.position = CGPoint(x: margin, y: lineY)
-                layer.strokeEnd = 0
-                host.layer.addSublayer(layer)
-                written.append(layer)
-
-                let length = pathLength(stroke) * scaleDown
-                let duration = max(Double(length) / 900.0, 0.02)
-                let anim = CABasicAnimation(keyPath: "strokeEnd")
-                anim.fromValue = 0
-                anim.toValue = 1
-                anim.beginTime = CACurrentMediaTime() + delay
-                anim.duration = duration
-                anim.fillMode = .both
-                anim.isRemovedOnCompletion = false
-                layer.add(anim, forKey: "write")
-                layer.strokeEnd = 1
-                delay += duration + 0.04            // 笔画间 40ms
+                addAnimatedStroke(stroke, scale: scaleDown, position: CGPoint(x: margin, y: lineY),
+                                   rng: &rng, delay: &delay)
             }
         }
         delay += 0.35                               // 句间 350ms
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { completion() }
+    }
+
+    /// SDT 轨迹路径：逐字判定数据源。字库有该字 → 取轨迹点（em-box [0,1]，人味化+曲线平滑）；
+    /// 字库没有 → 该单字回落到字体路径（只光栅化这一个字符）。两者共用 GlyphLayout 算出的同一套光标位置，
+    /// 保证一句里"轨迹字"和"回落字"（标点/数字/拉丁）落在同一行、同一基线、按同一节奏推进。
+    private func writeViaBank(_ sentence: String, bank: HandBank, fallbackHandFontName: String,
+                               completion: @escaping () -> Void) {
+        let cellWidth = bankGlyphSize + bankCharSpacing
+        let maxWidth = pageBounds.width - margin * 2
+        var rng = SystemRandomNumberGenerator()
+
+        let placements = GlyphLayout.layout(sentence, cellWidth: cellWidth, lineHeight: lineHeightOnPage,
+                                             maxWidth: maxWidth, origin: CGPoint(x: margin, y: cursorY))
+
+        var delay: CFTimeInterval = 0
+        for placement in placements {
+            let char = placement.char
+            let variant = Int.random(in: 0..<2, using: &rng)
+            if let trajectory = bank.strokes(for: char, variant: variant) ?? bank.strokes(for: char, variant: 0) {
+                // humanize()'s jitter amplitude is calibrated for pixel-scale coordinates (raster path
+                // glyphs are ~100+pt); trajectory points are unit em-box [0,1], so pre-scale to
+                // bankGlyphSize *before* humanizing — otherwise the default amplitude (0.4) is ~40% of
+                // the whole glyph and scrambles the character. Once pre-scaled, position with an
+                // identity transform (scale: 1) since the points are already in page-point units.
+                let localScale = trajectory.map { stroke in
+                    stroke.map { p in CGPoint(x: p.x * bankGlyphSize, y: p.y * bankGlyphSize) }
+                }
+                let humanized = Script.humanize(localScale, using: &rng)
+                for stroke in humanized {
+                    addAnimatedStroke(stroke, scale: 1, position: placement.topLeft,
+                                       rng: &rng, delay: &delay)
+                }
+            } else {
+                let font = fallbackFont(for: char, cjkFontName: fallbackHandFontName)
+                var mask = Script.rasterize(String(char), font: font)
+                Script.thin(&mask)
+                let simplified = Script.trace(mask).map { Script.simplify($0) }
+                guard !simplified.isEmpty else { continue }
+                let humanized = Script.humanize(simplified, using: &rng)
+                let scale = lineHeightOnPage / font.lineHeight
+                for stroke in humanized {
+                    addAnimatedStroke(stroke, scale: scale, position: placement.topLeft,
+                                       rng: &rng, delay: &delay)
+                }
+            }
+        }
+
+        if let last = placements.last {
+            cursorY = last.topLeft.y + lineHeightOnPage
+        }
+        delay += 0.35                               // 句间 350ms
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { completion() }
+    }
+
+    /// 单笔画的图层构建 + strokeEnd 动画，两条渲染路径共用：`scale` 把该笔画自身坐标系（字体路径是光栅像素，
+    /// 轨迹路径是 em-box [0,1]）换算到页面 pt；`position` 是该笔画所属字/行在页面上的锚点。
+    private func addAnimatedStroke(_ stroke: [CGPoint], scale: CGFloat, position: CGPoint,
+                                    rng: inout SystemRandomNumberGenerator, delay: inout CFTimeInterval) {
+        let layer = CAShapeLayer()
+        layer.path = Script.smoothPath(stroke)
+        let randomAlpha = CGFloat.random(in: 0.85...1.0, using: &rng)
+        layer.strokeColor = UIColor(cgColor: inkColor).withAlphaComponent(randomAlpha).cgColor
+        layer.fillColor = nil
+        layer.lineWidth = CGFloat.random(in: 1.8...2.6, using: &rng) / scale
+        layer.lineCap = .round
+        layer.lineJoin = .round
+        // 缩放 + 平移到页面位置
+        layer.setAffineTransform(CGAffineTransform(scaleX: scale, y: scale))
+        layer.position = position
+        layer.strokeEnd = 0
+        host.layer.addSublayer(layer)
+        written.append(layer)
+
+        let length = pathLength(stroke) * scale
+        let duration = max(Double(length) / 900.0, 0.02)
+        let anim = CABasicAnimation(keyPath: "strokeEnd")
+        anim.fromValue = 0
+        anim.toValue = 1
+        anim.beginTime = CACurrentMediaTime() + delay
+        anim.duration = duration
+        anim.fillMode = .both
+        anim.isRemovedOnCompletion = false
+        layer.add(anim, forKey: "write")
+        layer.strokeEnd = 1
+        delay += duration + 0.04            // 笔画间 40ms
     }
 
     func fadeOutAll(completion: @escaping () -> Void) {

@@ -2,6 +2,15 @@ import SwiftUI
 
 @main
 struct RiddleApp: App {
+    @MainActor
+    init() {
+        // 手泽（SDT 轨迹字库）常驻内存一次；缺文件/损坏时 preload 内部吞下失败，bank(for:) 返回 nil，
+        // QuillLayer/HandPickerView 全部回落字体，无需在此处理错误。
+        if let bankStyle = ReplyHands.shouze.bankStyle {
+            HandBankStore.shared.preload(style: bankStyle)
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
