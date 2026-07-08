@@ -196,6 +196,7 @@ struct HandPickerView: View {
     @State private var rowFrames: [CGRect] = []
     @State private var flashIndex: Int?
     @State private var isPicked = false
+    @State private var showAbout = false
 
     private let rowSpacing: CGFloat = 40
     private let guideBlockHeight: CGFloat = 96
@@ -236,6 +237,8 @@ struct HandPickerView: View {
                            onPick: handlePick, onMiss: handleMiss)
                     .ignoresSafeArea()
                 OverlayHost(view: fadeHost).ignoresSafeArea().allowsHitTesting(false)
+
+                settingsMark(containerSize: geo.size)
             }
             .onAppear {
                 cache.warm()
@@ -252,6 +255,28 @@ struct HandPickerView: View {
         .ignoresSafeArea()
         .persistentSystemOverlays(.hidden)
         .statusBarHidden(true)
+        .sheet(isPresented: $showAbout) {
+            AboutView(onDismiss: { showAbout = false })
+        }
+    }
+
+    /// 圈选页是全屏 PencilKit 画布（`PickCanvas`），这本子里唯一"非纸面"的入口只能靠一个不入戏的
+    /// 小机关触达：右下角一枚极淡的墨点，轻点（非圈选）即可打开关于/设置页——因为这是元层面
+    /// （致谢/隐私/音效/恢复购买），不是日记本身，所以允许用轻点代替圈选手势。
+    /// 44×44 命中区域保证可访问性，视觉上只露出一个 10pt、8% 透明度的墨点，不抢纸面的注意力。
+    private func settingsMark(containerSize: CGSize) -> some View {
+        Button {
+            showAbout = true
+        } label: {
+            Circle()
+                .fill(Color(Ink.quillColor))
+                .frame(width: 10, height: 10)
+                .opacity(0.08)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("关于")
+        .position(x: containerSize.width - 32, y: containerSize.height - 32)
     }
 
     @ViewBuilder
