@@ -23,7 +23,8 @@ targets:
         UIUserInterfaceStyle: Light
         UIStatusBarHidden: true
         UIRequiresFullScreen: true
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         MOONSHOT_API_KEY: $(MOONSHOT_API_KEY)
         MOONSHOT_BASE_URL: $(MOONSHOT_BASE_URL)
         MOONSHOT_MODEL: $(MOONSHOT_MODEL)
