@@ -36,16 +36,27 @@ final class OracleTests: XCTestCase {
         let store = ReplyHandStore(defaults: defaults)
 
         // Oracle 读取全局单例 ReplyHandStore.shared，这里直接对齐 shared 的当前选择来做断言，
-        // 覆盖：默认角色（归野）与切换后（Ashford）两种场景，system prompt 都应等于该角色 persona。
+        // 覆盖：默认角色（归野，非 alwaysEnglish，prompt 就是 persona 本身）与切换后（Ashford，
+        // alwaysEnglish，prompt 是 persona + 额外强提示行）两种场景。
         ReplyHandStore.shared.select(store.current.id) // 归野
         XCTAssertEqual(Oracle().systemPrompt(), ReplyHands.shouze.persona)
 
         ReplyHandStore.shared.select("ashford")
-        XCTAssertEqual(Oracle().systemPrompt(), ReplyHands.ashford.persona)
+        XCTAssertTrue(Oracle().systemPrompt().hasPrefix(ReplyHands.ashford.persona))
         XCTAssertTrue(Oracle().systemPrompt().contains("Always reply in English"))
 
         // 复位，避免影响其它测试对 shared 单例默认状态的假设
         ReplyHandStore.shared.select("shouze")
+    }
+
+    /// alwaysEnglish 角色的额外强提示行——不是靠 persona 文案本身，而是 Oracle 按 bool 主动追加的。
+    @MainActor
+    func testAshfordSystemPromptHasExtraEnglishGuardShouzeDoesNot() {
+        ReplyHandStore.shared.select("ashford")
+        XCTAssertTrue(Oracle().systemPrompt().contains("Reply ONLY in English."))
+
+        ReplyHandStore.shared.select("shouze")
+        XCTAssertFalse(Oracle().systemPrompt().contains("Reply ONLY in English."))
     }
 
     @MainActor

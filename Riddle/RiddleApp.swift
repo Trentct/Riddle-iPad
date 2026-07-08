@@ -22,8 +22,8 @@ struct RiddleApp: App {
     }
 }
 
-/// 每次冷启动都是开门仪式：先圈选笔迹，再进入日记纸面。
-/// 圈选后 DiaryView 不受影响——本文件外任何写作逻辑无需感知这道相位切换。
+/// 每次冷启动都是开门仪式：先圈选角色，再进入日记纸面；圈住纸角落款可随时合上本子、回到圈选页。
+/// 圈选后 DiaryView 本身的写作逻辑不受影响——只是多了一条 onReturnToPicker 出口。
 struct RootView: View {
     enum Phase { case picking, writing }
     @State private var phase: Phase = .picking
@@ -40,8 +40,12 @@ struct RootView: View {
                 }
                 .transition(.opacity)
             case .writing:
-                DiaryView()
-                    .transition(.opacity)
+                DiaryView {
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        phase = .picking
+                    }
+                }
+                .transition(.opacity)
             }
         }
     }

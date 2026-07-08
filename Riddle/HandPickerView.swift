@@ -19,17 +19,17 @@ enum CirclePick {
     }
 }
 
-/// 把一款手迹的样字句子经 Script 管线（rasterize→thin→trace→humanize）渲染成静态 UIImage。
+/// 把一款手迹渲染任意文本（圈选页用角色名，DiaryView 落款也复用同一套渲染）经 Script 管线
+/// （rasterize→thin→trace→humanize）渲染成静态 UIImage。
 /// 计算较慢（~0.2-0.3s/款），务必只在后台调用一次并缓存。
 enum HandSampleRenderer {
-    static let sentence = "见字如面，落墨为凭。"
     static let rowHeight: CGFloat = 64
     private static let rasterFontSize: CGFloat = 96
     private static let rasterLineWidth: CGFloat = 2.4
 
-    static func render(_ hand: ReplyHand, inkColor: CGColor) -> UIImage {
+    static func render(_ hand: ReplyHand, text: String, inkColor: CGColor) -> UIImage {
         guard let font = UIFont(name: hand.fontName, size: rasterFontSize) else { return UIImage() }
-        var mask = Script.rasterize(sentence, font: font)
+        var mask = Script.rasterize(text, font: font)
         Script.thin(&mask)
         var rng = SystemRandomNumberGenerator()
         let simplified = Script.trace(mask).map { Script.simplify($0) }
@@ -38,15 +38,15 @@ enum HandSampleRenderer {
     }
 
     /// 手泽（SDT 轨迹字库驱动）的样字渲染：与字体款共用 `GlyphLayout` 的逐字光标（QuillLayer 的
-    /// `writeViaBank` 也用同一套排版数学），确保圈选页第六行展示的就是真实轨迹笔迹，而不是字体骨架化。
-    /// 字库里没有的字符（这里主要是标点「，」「。」）单字回落到字体路径。
-    static func renderTrajectory(bank: HandBank, fallbackFontName: String, inkColor: CGColor) -> UIImage {
+    /// `writeViaBank` 也用同一套排版数学），确保圈选页第一行（归野）展示的就是真实轨迹笔迹，而不是字体骨架化。
+    /// 字库里没有的字符单字回落到字体路径。
+    static func renderTrajectory(bank: HandBank, text: String, fallbackFontName: String, inkColor: CGColor) -> UIImage {
         let glyphSize = rasterFontSize             // 与字体款用同一光栅尺度，人味化幅度才可比
         let charSpacing = glyphSize * 0.15
         let cellWidth = glyphSize + charSpacing
         var rng = SystemRandomNumberGenerator()
 
-        let placements = GlyphLayout.layout(sentence, cellWidth: cellWidth, lineHeight: glyphSize * 1.3,
+        let placements = GlyphLayout.layout(text, cellWidth: cellWidth, lineHeight: glyphSize * 1.3,
                                              maxWidth: .greatestFiniteMagnitude, origin: .zero)
         // GlyphLayout.resolveTrajectoryStrokes holds the resolution logic shared with
         // QuillLayer.writeViaBank (bank hit → page-mapped + humanized trajectory; miss →
@@ -98,7 +98,8 @@ enum HandSampleRenderer {
     }
 }
 
-/// 六款样字图片的缓存：首次 warm() 时在后台线程一次性渲染，避免卡顿启动首帧。
+/// 三款角色名样字图片的缓存：首次 warm() 时在后台线程一次性渲染，避免卡顿启动首帧。
+/// 圈选页三行、DiaryView 纸角落款都共用同一份缓存（同一角色的名字只需渲染一次）。
 @MainActor
 final class HandSampleCache: ObservableObject {
     static let shared = HandSampleCache()
@@ -118,11 +119,11 @@ final class HandSampleCache: ObservableObject {
         Task.detached(priority: .userInitiated) {
             let result = Dictionary(uniqueKeysWithValues: ReplyHands.all.map { hand -> (String, UIImage) in
                 if let bank = banks[hand.id] {
-                    let image = HandSampleRenderer.renderTrajectory(bank: bank, fallbackFontName: hand.fontName,
-                                                                     inkColor: inkColor)
+                    let image = HandSampleRenderer.renderTrajectory(bank: bank, text: hand.name,
+                                                                     fallbackFontName: hand.fontName, inkColor: inkColor)
                     return (hand.id, image)
                 }
-                return (hand.id, HandSampleRenderer.render(hand, inkColor: inkColor))
+                return (hand.id, HandSampleRenderer.render(hand, text: hand.name, inkColor: inkColor))
             })
             await MainActor.run { self.images = result }
         }
@@ -185,7 +186,7 @@ private struct PickCanvas: UIViewRepresentable {
     }
 }
 
-/// 启动即进入的圈选页：竖排四行样字，圈起其一即全局切换回信笔迹。DiaryView 本身不受影响。
+/// 启动即进入的圈选页：竖排三行，每行是该角色的名字（各自字迹渲染），圈起其一即全局切换回信角色。DiaryView 本身不受影响。
 struct HandPickerView: View {
     let onPicked: (ReplyHand) -> Void
 
@@ -269,15 +270,15 @@ struct HandPickerView: View {
         }
     }
 
-    /// 整个圈选区块（引导语 + 四行样字）在容器中垂直居中后的顶部 y；引导语与各行 frame 共用同一计算，避免错位。
+    /// 整个圈选区块（引导语 + 三行角色名）在容器中垂直居中后的顶部 y；引导语与各行 frame 共用同一计算，避免错位。
     private func layoutTopY(containerSize: CGSize) -> CGFloat {
         let count = CGFloat(ReplyHands.all.count)
         let totalHeight = guideBlockHeight + count * HandSampleRenderer.rowHeight + (count - 1) * rowSpacing
         return max(40, (containerSize.height - totalHeight) / 2)
     }
 
-    /// 命中框 = 每行「实际显示出的」样字矩形（居中于该行中心，尺寸取自与 `rowImage` 同一套 `fittedSize` 缩放），
-    /// 再向四周放宽 24pt 作为圈选容错，而不是整条容器宽度——避免空白页边距也能被圈中。
+    /// 命中框 = 每行「实际显示出的」角色名矩形（居中于该行中心，尺寸取自与 `rowImage` 同一套 `fittedSize` 缩放），
+    /// 再向四周放宽 30pt 作为圈选容错（≥28pt 要求），而不是整条容器宽度——避免空白页边距也能被圈中。
     private func computeRowFrames(containerSize: CGSize) -> [CGRect] {
         let rowHeight = HandSampleRenderer.rowHeight
         let topY = layoutTopY(containerSize: containerSize)
@@ -290,7 +291,7 @@ struct HandPickerView: View {
             let rect = CGRect(x: containerSize.width / 2 - fitted.width / 2,
                                y: centerY - fitted.height / 2,
                                width: fitted.width, height: fitted.height)
-            return rect.insetBy(dx: -24, dy: -24)
+            return rect.insetBy(dx: -30, dy: -30)
         }
     }
 

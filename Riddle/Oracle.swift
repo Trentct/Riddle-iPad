@@ -51,8 +51,12 @@ final class Oracle {
     private var history: [[String: Any]] = []
 
     /// 组装进请求的 system prompt——当前选中角色的 persona。暴露为方法便于测试断言。
+    /// alwaysEnglish 角色（Ashford）额外追加一行强提示：persona 文案里已经写了"永远用英文"，
+    /// 但这里再加一道轻量兜底，让 alwaysEnglish 这个 bool 真正驱动一段行为，而不只是可读标记。
     func systemPrompt() -> String {
-        ReplyHandStore.shared.current.persona
+        let hand = ReplyHandStore.shared.current
+        guard hand.alwaysEnglish else { return hand.persona }
+        return hand.persona + "\n\nReply ONLY in English."
     }
 
     /// 发送一页手写 PNG，逐句返回回信。

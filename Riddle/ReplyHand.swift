@@ -3,8 +3,9 @@ import UIKit
 /// 一个角色：id 用于持久化与匹配，name 用于圈选页展示、纸角落款，fontName 是 PostScript 名
 /// （字体款的渲染字体；轨迹款则是字库外字符回落用的字体）。bankStyle 非 nil 时表示该手迹由
 /// SDT 轨迹字库驱动（QuillLayer 走轨迹路径），字体款此字段恒为 nil。
-/// persona 是注入 Oracle system prompt 的角色声线；alwaysEnglish 为 true 时该角色永远用英文回信
-/// （由 persona 文案自身保证，这里只是可读的语义标记）。
+/// persona 是注入 Oracle system prompt 的角色声线；alwaysEnglish 为 true 时该角色永远用英文回信——
+/// persona 文案本身已写明这一点，且 Oracle.systemPrompt() 会在 alwaysEnglish 为 true 时额外追加一行
+/// 强提示（"Reply ONLY in English."），这个字段并非纯文档标记，它实际驱动该行为是否被追加。
 struct ReplyHand: Identifiable, Equatable {
     let id: String
     let name: String
