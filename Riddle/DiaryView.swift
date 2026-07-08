@@ -25,10 +25,14 @@ struct DiaryView: View {
     @State private var engine: TurnEngine?
     @ObservedObject private var paperStore = PaperStyleStore.shared
     @ObservedObject private var handStore = ReplyHandStore.shared
+    @ObservedObject private var onboardingStore = OnboardingStore.shared
     @StateObject private var handCache = HandSampleCache.shared
     /// 落款的命中区域（已含圈选容错），供 `checkSignatureCircle` 判定；随容器尺寸/角色/缓存就绪重算。
     @State private var signatureFrame: CGRect = .zero
     @State private var signatureCheckTask: Task<Void, Never>?
+    /// 首次引导墨迹：延时展示、写完停留后淡出；用户落笔时随时被抢占（见 `cancelOnboardingGuideIfNeeded`）。
+    @State private var onboardingTask: Task<Void, Never>?
+    @State private var onboardingQuill: QuillLayer?
 
     private let signatureMargin: CGFloat = 40
     private let signatureHeight: CGFloat = 36
@@ -69,6 +73,7 @@ struct DiaryView: View {
                 .animation(.easeInOut(duration: 0.35), value: style.id)
 
                 InkCanvas(canvasView: canvasView) { drawing in
+                    if !drawing.strokes.isEmpty { cancelOnboardingGuideIfNeeded() }
                     engine?.drawingChanged(drawing)
                     scheduleSignatureCheck()
                 }
@@ -78,6 +83,7 @@ struct DiaryView: View {
                 signatureView(containerSize: geo.size)
             }
             .onAppear {
+                let firstAppear = engine == nil
                 if engine == nil {
                     engine = TurnEngine(canvasView: canvasView, overlayHost: overlayHost)
                 }
@@ -85,6 +91,9 @@ struct DiaryView: View {
                 // warm() 内部按 started 去重，已热过时直接返回，不会重复渲染。
                 handCache.warm()
                 signatureFrame = computeSignatureFrame(containerSize: geo.size)
+                if firstAppear && !onboardingStore.hasSeenOnboarding {
+                    startOnboardingGuide(pageBounds: CGRect(origin: .zero, size: geo.size))
+                }
             }
             .onChange(of: geo.size) { _, newSize in
                 signatureFrame = computeSignatureFrame(containerSize: newSize)
@@ -149,6 +158,49 @@ struct DiaryView: View {
         strokes.removeLast()
         canvasView.drawing = PKDrawing(strokes: strokes)   // 触发 engine 再收到一次变化：idle 计时器复位，不会把这笔提交
         onReturnToPicker()
+    }
+
+    /// 首次引导：停顿 0.8s 后以当前角色笔迹写下引导句（overlay 层，永不进画布/永不发给 Oracle），
+    /// 停留 2.5s 供阅读，再淡出——淡出完成才标记"已见过"。全程任一步都可能被 `cancelOnboardingGuideIfNeeded`
+    /// 抢占（用户落笔优先），每次 await 之后都检查 `Task.isCancelled` 及时让位。
+    private func startOnboardingGuide(pageBounds: CGRect) {
+        onboardingTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.8))
+            guard !Task.isCancelled else { return }
+            guard canvasView.drawing.strokes.isEmpty else { return }   // 停顿期间用户已经落笔，让位
+
+            let quill = QuillLayer(host: overlayHost, pageBounds: pageBounds)
+            onboardingQuill = quill
+            let line = OnboardingGuide.line(for: handStore.current)
+
+            await withCheckedContinuation { cont in
+                quill.write(line) { cont.resume() }
+            }
+            guard !Task.isCancelled else { return }
+
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+
+            await withCheckedContinuation { cont in
+                quill.fadeOutAll { cont.resume() }
+            }
+            onboardingQuill = nil
+            onboardingStore.markSeen()
+        }
+    }
+
+    /// 用户开始写字：立即让引导墨迹让位。若还在停顿期（笔迹尚未画出）静默取消；
+    /// 若已经在纸上（哪怕只写了一半），直接淡出——复用与 TurnEngine 落笔抢占同样的观感。
+    /// 无论哪种情况，引导都算"已经出现过"，标记已见过，不会再次触发。
+    private func cancelOnboardingGuideIfNeeded() {
+        guard onboardingTask != nil else { return }
+        onboardingTask?.cancel()
+        onboardingTask = nil
+        if let quill = onboardingQuill {
+            onboardingQuill = nil
+            quill.fadeOutAll {}
+        }
+        onboardingStore.markSeen()
     }
 }
 
