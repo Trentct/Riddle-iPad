@@ -54,6 +54,16 @@ struct InkCanvas: UIViewRepresentable {
             onChange(canvasView.drawing)
         }
 
+        // 笔尖音效门控：用「工具接触/离开纸面」而非笔迹变化去判定书写区间——精确对应每一笔的起止，
+        // 比对 drawingDidChange 做去抖推断更贴近真实运笔节奏（PenSound 内部有淡入淡出，连续落笔不会闪断）。
+        func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
+            PenSound.shared.start()
+        }
+
+        func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
+            PenSound.shared.stop()
+        }
+
         // 双指横扫判定：位移超阈值且以横向为主 → 翻纸。每次手势只翻一次。
         private var panConsumed = false
 

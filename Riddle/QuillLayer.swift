@@ -43,11 +43,18 @@ final class QuillLayer {
     }
 
     func write(_ sentence: String, completion: @escaping () -> Void) {
+        // 笔尖音效：AI 落笔写这一句期间响起，写完（或被抢占淡出）即停——与用户书写共用同一个 PenSound。
+        PenSound.shared.start()
+        let stopSoundThenComplete: () -> Void = {
+            PenSound.shared.stop()
+            completion()
+        }
+
         let hand = ReplyHandStore.shared.current
         if let bankStyle = hand.bankStyle, let bank = HandBankStore.shared.bank(for: bankStyle) {
-            writeViaBank(sentence, bank: bank, fallbackHandFontName: hand.fontName, completion: completion)
+            writeViaBank(sentence, bank: bank, fallbackHandFontName: hand.fontName, completion: stopSoundThenComplete)
         } else {
-            writeViaFont(sentence, completion: completion)
+            writeViaFont(sentence, completion: stopSoundThenComplete)
         }
     }
 
@@ -147,6 +154,8 @@ final class QuillLayer {
     }
 
     func fadeOutAll(completion: @escaping () -> Void) {
+        // 被抢占时（用户落笔打断 AI 回信）立即止声，不必等那句尚未完成的 write() 的延时 completion 才停。
+        PenSound.shared.stop()
         guard !written.isEmpty else { completion(); return }
         let layers = written
         written = []
