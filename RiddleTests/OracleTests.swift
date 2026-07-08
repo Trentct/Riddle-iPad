@@ -29,6 +29,26 @@ final class OracleTests: XCTestCase {
     }
 
     @MainActor
+    func testOracleSystemPromptUsesSelectedCharacterPersona() {
+        let suite = "OracleTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ReplyHandStore(defaults: defaults)
+
+        // Oracle 读取全局单例 ReplyHandStore.shared，这里直接对齐 shared 的当前选择来做断言，
+        // 覆盖：默认角色（归野）与切换后（Ashford）两种场景，system prompt 都应等于该角色 persona。
+        ReplyHandStore.shared.select(store.current.id) // 归野
+        XCTAssertEqual(Oracle().systemPrompt(), ReplyHands.shouze.persona)
+
+        ReplyHandStore.shared.select("ashford")
+        XCTAssertEqual(Oracle().systemPrompt(), ReplyHands.ashford.persona)
+        XCTAssertTrue(Oracle().systemPrompt().contains("Always reply in English"))
+
+        // 复位，避免影响其它测试对 shared 单例默认状态的假设
+        ReplyHandStore.shared.select("shouze")
+    }
+
+    @MainActor
     func testOracleSmoke() async throws {
         try XCTSkipIf(Secrets.apiKey.isEmpty || Secrets.apiKey.contains("换成"), "未配置 key")
         let img = UIGraphicsImageRenderer(size: .init(width: 400, height: 200)).pngData { ctx in

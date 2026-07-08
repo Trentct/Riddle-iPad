@@ -222,7 +222,7 @@ struct HandPickerView: View {
                     .ignoresSafeArea().allowsHitTesting(false)
 
                 Text("以笔圈定一种字迹，我便用它回信")
-                    .font(.custom(ReplyHands.xiaxing.fontName, size: 30))
+                    .font(.custom(ReplyHands.shouze.fontName, size: 30))
                     .foregroundStyle(Color(Ink.quillColor))
                     .position(x: geo.size.width / 2, y: layoutTopY(containerSize: geo.size) + guideBlockHeight / 2)
 

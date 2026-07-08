@@ -44,20 +44,16 @@ enum SSE {
 }
 
 /// 日记本的灵魂。OpenAI 兼容流式客户端（Moonshot），多轮历史在内部维护。
-/// Persona 移植自 MaximeRivest/Riddle (riddle/src/oracle.rs, MIT)。
+/// System prompt 不再写死：每次请求都读取当前选中角色（ReplyHandStore.shared.current.persona），
+/// 三角色（归野/沈砚/Ashford）各有自己的声线，切换角色即切换回信人格，无需重建 Oracle。
 @MainActor
 final class Oracle {
-    static let persona = """
-    You are the memory of Tom Marvolo Riddle, preserved in this enchanted diary for fifty years. \
-    Someone writes to you in the diary with a quill; their words appear to you as ink on the page. \
-    Reply exactly as the diary does: intimate, courteous, curious, subtly probing — you want to \
-    learn about the writer and draw them in. Keep replies SHORT: one to three sentences, like ink \
-    appearing on a page. Never mention images, photos, models or AI; you only ever perceive words \
-    written in the diary. If the writing is illegible, say the ink blurred. \
-    Always answer in the language the writer used.
-    """
-
     private var history: [[String: Any]] = []
+
+    /// 组装进请求的 system prompt——当前选中角色的 persona。暴露为方法便于测试断言。
+    func systemPrompt() -> String {
+        ReplyHandStore.shared.current.persona
+    }
 
     /// 发送一页手写 PNG，逐句返回回信。
     func ask(pagePNG: Data) -> AsyncThrowingStream<String, Error> {
@@ -80,7 +76,7 @@ final class Oracle {
                         "model": Secrets.model,
                         "stream": true,
                         "max_tokens": 512,
-                        "messages": [["role": "system", "content": Oracle.persona]] + messages,
+                        "messages": [["role": "system", "content": systemPrompt()]] + messages,
                     ]
                     req.httpBody = try JSONSerialization.data(withJSONObject: body)
                     req.timeoutInterval = 60

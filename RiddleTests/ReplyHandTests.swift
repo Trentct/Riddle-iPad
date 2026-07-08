@@ -9,11 +9,24 @@ final class ReplyHandTests: XCTestCase {
         }
     }
 
-    func testOrderIsWenkaiXiaxingHanchanLongcangMaocaoShouze() {
-        XCTAssertEqual(ReplyHands.all.map(\.id), ["wenkai", "xiaxing", "hanchan", "longcang", "maocao", "shouze"])
+    func testOrderIsShouzeWenkaiAshford() {
+        XCTAssertEqual(ReplyHands.all.map(\.id), ["shouze", "wenkai", "ashford"])
     }
 
-    /// 手泽（第六款）是唯一带 bankStyle 的手迹——其余五款字体骨架化手迹此字段恒为 nil；
+    func testAllHandsHaveNonEmptyPersona() {
+        for hand in ReplyHands.all {
+            XCTAssertFalse(hand.persona.isEmpty, "\(hand.id) 的 persona 不应为空")
+        }
+    }
+
+    func testAlwaysEnglishOnlyAshford() {
+        for hand in ReplyHands.all where hand.id != "ashford" {
+            XCTAssertFalse(hand.alwaysEnglish, "\(hand.id) 不应强制英文")
+        }
+        XCTAssertTrue(ReplyHands.ashford.alwaysEnglish)
+    }
+
+    /// 手泽（三款之一）是唯一带 bankStyle 的手迹——其余两款字体骨架化手迹此字段恒为 nil；
     /// 且 HandBankStore 能加载手泽引用的真实字库、其 contains 对常用字返回 true（QuillLayer/
     /// HandPickerView 都经这条单例路径拿到同一份已加载的 bank）。
     @MainActor
@@ -29,13 +42,35 @@ final class ReplyHandTests: XCTestCase {
     }
 
     @MainActor
-    func testDefaultIsXiaxing() {
+    func testDefaultIsShouze() {
         let suite = "ReplyHandTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let store = ReplyHandStore(defaults: defaults)
-        XCTAssertEqual(store.current.id, "xiaxing")
+        XCTAssertEqual(store.current.id, "shouze")
+    }
+
+    @MainActor
+    func testRemovedHandIDFallsBackToShouze() {
+        let suite = "ReplyHandTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("xiaxing", forKey: ReplyHandStore.defaultsKey)
+
+        let store = ReplyHandStore(defaults: defaults)
+        XCTAssertEqual(store.current.id, "shouze")
+    }
+
+    @MainActor
+    func testPersistedWenkaiStaysWenkai() {
+        let suite = "ReplyHandTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("wenkai", forKey: ReplyHandStore.defaultsKey)
+
+        let store = ReplyHandStore(defaults: defaults)
+        XCTAssertEqual(store.current.id, "wenkai")
     }
 
     @MainActor
@@ -45,13 +80,13 @@ final class ReplyHandTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let store = ReplyHandStore(defaults: defaults)
-        store.select("longcang")
-        XCTAssertEqual(store.current.id, "longcang")
+        store.select("ashford")
+        XCTAssertEqual(store.current.id, "ashford")
 
         let reloaded = ReplyHandStore(defaults: defaults)
-        XCTAssertEqual(reloaded.current.id, "longcang")
+        XCTAssertEqual(reloaded.current.id, "ashford")
 
         reloaded.select("not-a-real-hand")
-        XCTAssertEqual(reloaded.current.id, "xiaxing")
+        XCTAssertEqual(reloaded.current.id, "shouze")
     }
 }
