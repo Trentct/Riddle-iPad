@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "coord_convention": "unit em-box [0,1]x[0,1], origin top-left, y-down",
+  "quantization": "uint16 fixed point, value = round(coord * 65535)",
+  "generated_at": "2026-07-07T23:55:54Z",
+  "variants_per_char": 2,
+  "styles": {
+    "neat-C002": {
+      "n_chars": 6763,
+      "n_variants": 13526,
+      "n_capped": 0,
+      "n_points": 625176,
+      "n_strokes": 106950,
+      "raw_bin_bytes": 2728130,
+      "gz_bin_bytes": 1368267,
+      "gz_index_bytes": 119982,
+      "total_bytes": 1488249,
+      "bytes_per_char": 220.1
+    },
+    "flowing-C020": {
+      "n_chars": 503,
+      "n_variants": 1006,
+      "n_capped": 0,
+      "n_points": 36916,
+      "n_strokes": 1270,
+      "raw_bin_bytes": 151210,
+      "gz_bin_bytes": 76712,
+      "gz_index_bytes": 8471,
+      "total_bytes": 85183,
+      "bytes_per_char": 169.3
+    }
+  }
+}
