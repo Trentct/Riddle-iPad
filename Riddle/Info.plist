@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>APP_SHARED_SECRET</key>
+	<string>$(APP_SHARED_SECRET)</string>
+	<key>BACKEND_URL</key>
+	<string>$(BACKEND_URL)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -18,18 +22,14 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>MOONSHOT_API_KEY</key>
 	<string>$(MOONSHOT_API_KEY)</string>
 	<key>MOONSHOT_BASE_URL</key>
 	<string>$(MOONSHOT_BASE_URL)</string>
 	<key>MOONSHOT_MODEL</key>
 	<string>$(MOONSHOT_MODEL)</string>
-	<key>USE_BACKEND</key>
-	<string>$(USE_BACKEND)</string>
-	<key>BACKEND_URL</key>
-	<string>$(BACKEND_URL)</string>
-	<key>APP_SHARED_SECRET</key>
-	<string>$(APP_SHARED_SECRET)</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>DancingScript-Regular.ttf</string>
@@ -50,5 +50,7 @@
 	<true/>
 	<key>UIUserInterfaceStyle</key>
 	<string>Light</string>
+	<key>USE_BACKEND</key>
+	<string>$(USE_BACKEND)</string>
 </dict>
 </plist>

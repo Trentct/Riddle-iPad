@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  说明（供 owner 审核，不影响清单内容）：
+	  - App 会把手写画布截图发送给 Moonshot API（及自建 Railway 代理）以生成回信文本，
+	    这是应用核心功能所必需的数据传输，不是用于广告/分析/第三方追踪，因此
+	    NSPrivacyTracking 为 false，NSPrivacyCollectedDataTypes 留空。
+	  - 代码中检索到的 required-reason API 用法：
+	    * UserDefaults（DeviceId.swift / OnboardingStore.swift / UsageStore.swift /
+	      ReplyHand.swift / PaperStyle.swift / SoundStore.swift）——均为 `UserDefaults.standard`，
+	      未使用 suiteName / App Group 共享容器，对应 reason code CA92.1（仅读写本 App 自己的数据）。
+	    * FileManager（HistoryStore.swift）——仅用 createDirectory / fileExists / removeItem /
+	      moveItem / Data(contentsOf:) / write(to:)，未读取文件时间戳属性（creationDate /
+	      contentModificationDate 等）、未查询磁盘可用空间、未读取系统启动时间，因此不触发
+	      File Timestamp / Disk Space / System Boot Time 这几类 required-reason API，未声明。
+	-->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
