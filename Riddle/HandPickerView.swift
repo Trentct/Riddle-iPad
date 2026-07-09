@@ -98,6 +98,20 @@ enum HandSampleRenderer {
     }
 }
 
+/// 按角色选对渲染路径（手泽走轨迹字库、其余走字体骨架化），`HandSampleCache`（圈选页/落款，墨色）与
+/// `BookNameCache`（书封，烫金色，见 BookCover.swift）共用同一份分支逻辑——两处唯一的差异只是 inkColor，
+/// 渲染算法本身（HandSampleRenderer）不重复实现。`bank` 由调用方在 MainActor 上下文里先取出再传入
+/// （HandBankStore.bank(for:) 是 @MainActor 同步调用，不能在 Task.detached 内部调用）。
+enum HandNameRenderer {
+    static func render(_ hand: ReplyHand, bank: HandBank?, inkColor: CGColor) -> UIImage {
+        if let bank {
+            return HandSampleRenderer.renderTrajectory(bank: bank, text: hand.name,
+                                                        fallbackFontName: hand.fontName, inkColor: inkColor)
+        }
+        return HandSampleRenderer.render(hand, text: hand.name, inkColor: inkColor)
+    }
+}
+
 /// 三款角色名样字图片的缓存：首次 warm() 时在后台线程一次性渲染，避免卡顿启动首帧。
 /// 圈选页三行、DiaryView 纸角落款都共用同一份缓存（同一角色的名字只需渲染一次）。
 @MainActor
@@ -118,12 +132,7 @@ final class HandSampleCache: ObservableObject {
         })
         Task.detached(priority: .userInitiated) {
             let result = Dictionary(uniqueKeysWithValues: ReplyHands.all.map { hand -> (String, UIImage) in
-                if let bank = banks[hand.id] {
-                    let image = HandSampleRenderer.renderTrajectory(bank: bank, text: hand.name,
-                                                                     fallbackFontName: hand.fontName, inkColor: inkColor)
-                    return (hand.id, image)
-                }
-                return (hand.id, HandSampleRenderer.render(hand, text: hand.name, inkColor: inkColor))
+                (hand.id, HandNameRenderer.render(hand, bank: banks[hand.id], inkColor: inkColor))
             })
             await MainActor.run { self.images = result }
         }

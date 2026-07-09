@@ -22,8 +22,10 @@ struct RiddleApp: App {
     }
 }
 
-/// 每次冷启动都是开门仪式：先圈选角色，再进入日记纸面；圈住纸角落款可随时合上本子、回到圈选页。
-/// 圈选后 DiaryView 本身的写作逻辑不受影响——只是多了一条 onReturnToPicker 出口。
+/// 每次冷启动都是开门仪式：先在书架上取一本书（选角色），再进入日记纸面；圈住纸角落款可随时合上
+/// 本子、回到书架。选书后 DiaryView 本身的写作逻辑不受影响——只是多了一条 onReturnToPicker 出口。
+/// `.picking` 相位现由 `BookshelfView`（三本书立在书桌上）承载；`HandPickerView`（旧的圈选三行字）
+/// 保留在文件里未删除，只是不再路由到它——留给 Task 2 / 作为后备。
 struct RootView: View {
     enum Phase { case picking, writing }
     @State private var phase: Phase = .picking
@@ -32,9 +34,10 @@ struct RootView: View {
         ZStack {
             switch phase {
             case .picking:
-                HandPickerView { hand in
+                BookshelfView { hand in
                     ReplyHandStore.shared.select(hand.id)
-                    withAnimation(.easeInOut(duration: 0.35)) {
+                    // Task 2 会在这里接入 matchedGeometryEffect 展开转场；本任务先直接切到书写页。
+                    withAnimation {
                         phase = .writing
                     }
                 }
