@@ -36,6 +36,6 @@ final class StoreManagerTests: XCTestCase {
 
     func testUnlockProductIDConstant() {
         // FLAG: Trent 待定的占位符 id；这个测试只是防止以后不小心手滑改掉却没人注意到。
-        XCTAssertEqual(StoreManager.unlockProductID, "com.trent.Riddle.unlimited")
+        XCTAssertEqual(StoreManager.unlockProductID, "com.trentct.riddle.unlimited")
     }
 }
