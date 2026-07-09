@@ -142,9 +142,10 @@ struct DiaryView: View {
         guard let lastStroke = canvasView.drawing.strokes.last else { return }
         guard SignaturePick.isCircled(strokeBounds: lastStroke.renderBounds, signatureFrame: signatureFrame) else { return }
 
-        var strokes = canvasView.drawing.strokes
-        strokes.removeLast()
-        canvasView.drawing = PKDrawing(strokes: strokes)   // 触发 engine 再收到一次变化：idle 计时器复位，不会把这笔提交
+        // 合上本子即弃稿：直接清空整页（而非用 PKDrawing(strokes:) 重建子集——后者会让 PencilKit
+        // 解析不到原画布的笔画标识符，吐 "stroke identifier / stroke group" 内部日志）。清空同样复位
+        // idle 计时器、丢弃这笔圈，且让下次翻开是一张新页。
+        canvasView.drawing = PKDrawing()
         onReturnToPicker()
     }
 
