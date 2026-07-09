@@ -12,6 +12,7 @@ targets:
     sources: [Riddle, Configuration.storekit]
     settings:
       base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.trentct.riddle
         TARGETED_DEVICE_FAMILY: 2
         SWIFT_VERSION: 5.9
         CODE_SIGN_STYLE: Automatic

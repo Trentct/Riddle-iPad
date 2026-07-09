@@ -1,0 +1,13 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Riddle app icon, cool ivory background with absorbed tail R mark">
+  <title>Riddle App Icon - Cool Ivory 01</title>
+  <rect width="1024" height="1024" fill="#edeae2"/>
+  <g transform="translate(170 140) scale(6.84)" fill="none" stroke="#101a2b" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 78 C38 65 38 48 38 32 C38 20 47 14 58 16 C70 18 75 27 70 38 C66 47 54 51 42 48" stroke-width="6.5"/>
+    <path d="M44 49 C56 55 64 65 72 78" stroke-width="6.5"/>
+  </g>
+  <g transform="translate(170 140) scale(6.84)" fill="#7c7a73" opacity=".52">
+    <circle cx="75" cy="81" r="2.5"/>
+    <circle cx="81" cy="84" r="1.5"/>
+    <circle cx="69" cy="85" r="1.2"/>
+  </g>
+</svg>

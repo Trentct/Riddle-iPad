@@ -1,0 +1,6 @@
+<svg id="root" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Riddle open page R mark">
+  <title>Riddle Mark 04 - Open Page</title>
+  <path d="M23 20 C34 16 44 18 50 25 C56 18 66 16 77 20 L77 80 C66 76 56 78 50 85 C44 78 34 76 23 80 Z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M50 25 L50 85" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+  <path d="M36 67 C42 56 42 44 42 34 C42 27 48 24 55 26 C63 28 65 35 61 41 C57 47 49 48 42 46 C51 50 57 58 64 68" fill="none" stroke="currentColor" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

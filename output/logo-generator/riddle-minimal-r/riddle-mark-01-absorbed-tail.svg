@@ -1,0 +1,12 @@
+<svg id="root" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Riddle absorbed tail R mark">
+  <title>Riddle Mark 01 - Absorbed Tail</title>
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 78 C38 65 38 48 38 32 C38 20 47 14 58 16 C70 18 75 27 70 38 C66 47 54 51 42 48" stroke-width="6.5"/>
+    <path d="M44 49 C56 55 64 65 72 78" stroke-width="6.5"/>
+  </g>
+  <g fill="currentColor" opacity=".38">
+    <circle cx="75" cy="81" r="2.5"/>
+    <circle cx="81" cy="84" r="1.5"/>
+    <circle cx="69" cy="85" r="1.2"/>
+  </g>
+</svg>

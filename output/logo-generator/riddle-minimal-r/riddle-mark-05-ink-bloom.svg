@@ -1,0 +1,6 @@
+<svg id="root" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Riddle ink bloom R mark">
+  <title>Riddle Mark 05 - Ink Bloom</title>
+  <circle cx="57" cy="52" r="29" fill="currentColor" opacity=".09"/>
+  <circle cx="60" cy="56" r="21" fill="currentColor" opacity=".08"/>
+  <path d="M30 77 C39 63 40 50 39 33 C39 21 48 15 59 17 C70 19 75 29 69 39 C64 47 52 50 41 47 C54 52 63 63 72 77" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -8,7 +8,7 @@ final class StoreManager: ObservableObject {
     static let shared = StoreManager()
 
     /// FLAG: Trent 待定——占位符 product id，App Store Connect 里创建真实商品后替换成正式 id。
-    static let unlockProductID = "com.trent.Riddle.unlimited"
+    static let unlockProductID = "com.trentct.riddle.unlimited"
 
     @Published private(set) var products: [Product] = []
     @Published private(set) var isUnlocked: Bool = false

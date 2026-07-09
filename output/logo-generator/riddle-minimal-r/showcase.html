@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Riddle - Minimal R Logo Exploration</title>
+  <style>
+    :root {
+      --ink: #101a2b;
+      --paper: #efe1bb;
+      --paper-2: #d7bd82;
+      --charcoal: #111216;
+      --muted: #777064;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(239, 225, 187, .16), transparent 36rem),
+        #0c0d10;
+      color: #f6f1e7;
+    }
+    main {
+      width: min(1180px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 72px 0 88px;
+    }
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 32px;
+      align-items: end;
+      margin-bottom: 44px;
+      border-bottom: 1px solid rgba(246, 241, 231, .14);
+      padding-bottom: 28px;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-weight: 500;
+      letter-spacing: 0;
+      font-size: clamp(36px, 5vw, 68px);
+    }
+    .subtitle {
+      max-width: 660px;
+      margin: 0;
+      color: rgba(246, 241, 231, .66);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+    .badge {
+      color: rgba(246, 241, 231, .54);
+      border: 1px solid rgba(246, 241, 231, .18);
+      padding: 10px 13px;
+      border-radius: 999px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 22px;
+    }
+    .card {
+      background: rgba(255, 255, 255, .045);
+      border: 1px solid rgba(255, 255, 255, .11);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .preview {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      padding: 22px;
+      min-height: 188px;
+      background: rgba(255, 255, 255, .028);
+    }
+    .tile {
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+    }
+    .tile svg { width: 62%; height: 62%; display: block; }
+    .paper {
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 61% 52%, rgba(16, 26, 43, .08), transparent 46%),
+        linear-gradient(145deg, var(--paper), var(--paper-2));
+    }
+    .ink {
+      color: var(--paper);
+      background: var(--ink);
+    }
+    .ios {
+      color: var(--ink);
+      border-radius: 24%;
+      background:
+        radial-gradient(circle at 58% 50%, rgba(16, 26, 43, .07), transparent 45%),
+        linear-gradient(145deg, #f4e7c6, #c69d63);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.24), 0 16px 30px rgba(0,0,0,.22);
+    }
+    .body { padding: 19px 20px 22px; }
+    h2 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      font-weight: 520;
+      letter-spacing: 0;
+    }
+    .meta {
+      margin: 0 0 14px;
+      color: #cdbf9f;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .body p {
+      margin: 0;
+      color: rgba(246, 241, 231, .68);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .recommendation {
+      margin-top: 36px;
+      padding: 26px 28px;
+      border: 1px solid rgba(239, 225, 187, .18);
+      border-radius: 8px;
+      background: rgba(239, 225, 187, .06);
+      color: rgba(246, 241, 231, .76);
+      line-height: 1.7;
+    }
+    .recommendation strong { color: #f5e4b9; font-weight: 560; }
+    @media (max-width: 960px) {
+      header { grid-template-columns: 1fr; align-items: start; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      main { width: min(100vw - 28px, 1180px); padding-top: 44px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Riddle</h1>
+        <p class="subtitle">Six minimalist SVG logo directions built from the handwritten R idea: quiet paper, dark ink, and a small hint that the page can absorb what you write.</p>
+      </div>
+      <div class="badge">Logo Generator Skill / SVG Set</div>
+    </header>
+
+    <section class="grid" aria-label="Riddle logo variants">
+      <article class="card">
+        <div class="preview">
+          <div class="tile paper">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-01-absorbed-tail.svg#root"/></svg>
+          </div>
+          <div class="tile ink">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-01-absorbed-tail.svg#root"/></svg>
+          </div>
+          <div class="tile ios">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-01-absorbed-tail.svg#root"/></svg>
+          </div>
+        </div>
+        <div class="body">
+          <h2>01 Absorbed Tail</h2>
+          <p class="meta">Organic / mnemonic</p>
+          <p>Classic handwritten R with three fading ink dots. This is the most direct bridge between “brand mark” and the page-drinks-ink mechanic.</p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="preview">
+          <div class="tile paper">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-02-monoline-pencil.svg#root"/></svg>
+          </div>
+          <div class="tile ink">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-02-monoline-pencil.svg#root"/></svg>
+          </div>
+          <div class="tile ios">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-02-monoline-pencil.svg#root"/></svg>
+          </div>
+        </div>
+        <div class="body">
+          <h2>02 Monoline Pencil</h2>
+          <p class="meta">Clean / app-native</p>
+          <p>One continuous stroke, fewer accents, strongest small-size readability. It feels closest to Apple Pencil without becoming an illustration.</p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="preview">
+          <div class="tile paper">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-03-negative-space.svg#root"/></svg>
+          </div>
+          <div class="tile ink">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-03-negative-space.svg#root"/></svg>
+          </div>
+          <div class="tile ios">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-03-negative-space.svg#root"/></svg>
+          </div>
+        </div>
+        <div class="body">
+          <h2>03 High Contrast</h2>
+          <p class="meta">Premium / high contrast</p>
+          <p>A light R on a solid ink block. It is the most formal and highest contrast, useful if the app icon needs a stronger silhouette.</p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="preview">
+          <div class="tile paper">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-04-open-page.svg#root"/></svg>
+          </div>
+          <div class="tile ink">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-04-open-page.svg#root"/></svg>
+          </div>
+          <div class="tile ios">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-04-open-page.svg#root"/></svg>
+          </div>
+        </div>
+        <div class="body">
+          <h2>04 Open Page</h2>
+          <p class="meta">Literal / diary</p>
+          <p>Adds the minimum book/page cue around the R. More explanatory, slightly less minimal, still clean enough for an iPad demo icon.</p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="preview">
+          <div class="tile paper">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-05-ink-bloom.svg#root"/></svg>
+          </div>
+          <div class="tile ink">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-05-ink-bloom.svg#root"/></svg>
+          </div>
+          <div class="tile ios">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-05-ink-bloom.svg#root"/></svg>
+          </div>
+        </div>
+        <div class="body">
+          <h2>05 Ink Bloom</h2>
+          <p class="meta">Atmospheric / soft</p>
+          <p>Uses a very quiet bloom behind the R, enough to suggest absorbed ink without turning into a stain or fantasy effect.</p>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="preview">
+          <div class="tile paper">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-06-stroke-system.svg#root"/></svg>
+          </div>
+          <div class="tile ink">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-06-stroke-system.svg#root"/></svg>
+          </div>
+          <div class="tile ios">
+            <svg viewBox="0 0 100 100"><use href="riddle-mark-06-stroke-system.svg#root"/></svg>
+          </div>
+        </div>
+        <div class="body">
+          <h2>06 Stroke System</h2>
+          <p class="meta">Constructed / technical</p>
+          <p>Breaks the R into visible stroke pieces, nodding to the app's handwriting synthesis pipeline while staying abstract.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="recommendation">
+      <strong>Recommendation:</strong> use 02 as the base if you want the cleanest iOS icon, or 01 if you want the app's “paper absorbs ink” idea to be visible at first glance. 05 is the best hybrid candidate: simple R, slight ink atmosphere.
+    </section>
+  </main>
+</body>
+</html>

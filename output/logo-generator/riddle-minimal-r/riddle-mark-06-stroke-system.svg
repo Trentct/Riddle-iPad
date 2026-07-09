@@ -1,0 +1,9 @@
+<svg id="root" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Riddle stroke system R mark">
+  <title>Riddle Mark 06 - Stroke System</title>
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M31 76 C40 63 41 49 40 33" stroke-width="6"/>
+    <path d="M40 33 C40 22 49 16 59 18 C70 20 74 29 69 38 C64 47 52 50 41 47" stroke-width="6"/>
+    <path d="M43 48 C55 53 64 63 72 76" stroke-width="6"/>
+  </g>
+  <path d="M27 25 C40 16 60 11 75 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" opacity=".35"/>
+</svg>

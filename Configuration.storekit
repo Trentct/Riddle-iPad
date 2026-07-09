@@ -13,7 +13,7 @@
           "locale" : "zh_Hans"
         }
       ],
-      "productID" : "com.trent.Riddle.unlimited",
+      "productID" : "com.trentct.riddle.unlimited",
       "referenceName" : "解锁无限（终身）",
       "type" : "NonConsumable"
     }
