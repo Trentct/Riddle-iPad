@@ -18,7 +18,7 @@ final class SoundStore: ObservableObject {
         // 默认开启：未设置过时不能用 `defaults.bool(forKey:)` 的天然 false 默认值（那是给
         // OnboardingStore 那种「默认关」用的），这里必须显式判断 key 是否存在过。
         if defaults.object(forKey: Self.defaultsKey) == nil {
-            self.isEnabled = true
+            self.isEnabled = false
         } else {
             self.isEnabled = defaults.bool(forKey: Self.defaultsKey)
         }

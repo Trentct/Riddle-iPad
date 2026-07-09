@@ -57,7 +57,6 @@ enum AboutLinks {
 struct AboutView: View {
     let onDismiss: () -> Void
 
-    @ObservedObject private var soundStore = SoundStore.shared
     @ObservedObject private var storeManager = StoreManager.shared
     @State private var isRestoring = false
     @State private var restoreDone = false
@@ -76,7 +75,6 @@ struct AboutView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     header
                     Divider().opacity(0.3)
-                    soundSection
                     Divider().opacity(0.3)
                     restoreSection
                     Divider().opacity(0.3)
@@ -117,20 +115,6 @@ struct AboutView: View {
                 .font(.custom(ReplyHands.wenkai.fontName, size: 17))
                 .opacity(0.75)
                 .padding(.top, 4)
-        }
-    }
-
-    private var soundSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("声音")
-            Toggle(isOn: Binding(
-                get: { soundStore.isEnabled },
-                set: { soundStore.setEnabled($0) }
-            )) {
-                Text("书写笔尖音效")
-                    .font(.system(size: 15))
-            }
-            .tint(Color(Ink.quillColor))
         }
     }
 

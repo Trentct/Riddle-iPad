@@ -9,7 +9,7 @@ final class UsageStore: ObservableObject {
     static let shared = UsageStore()
 
     /// FLAG: Trent 的产品决策——免费额度默认 5 次/天，随时可改这一个常量。
-    static let freeRepliesPerDay = 5
+    static let freeRepliesPerDay = 100
 
     private static let countKey = "usageStore.count"
     private static let dayKey = "usageStore.day"

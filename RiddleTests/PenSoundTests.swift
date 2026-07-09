@@ -10,7 +10,8 @@ final class PenSoundTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
 
-        let store = SoundStore(defaults: defaults)   // 默认开启
+        let store = SoundStore(defaults: defaults)
+        store.setEnabled(true)   // 音效默认已下线，此测试显式开启以验证引擎门控
         let pen = PenSound(store: store)
 
         pen.start()
@@ -50,6 +51,7 @@ final class PenSoundTests: XCTestCase {
 
         let store = SoundStore(defaults: defaults)
         let pen = PenSound(store: store)
+        store.setEnabled(true)   // 音效默认已下线，显式开启验证 shouldPlay 跟随开关
         XCTAssertTrue(pen.shouldPlay())
 
         store.setEnabled(false)
@@ -103,6 +105,7 @@ final class PenSoundTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let store = SoundStore(defaults: defaults)
+        store.setEnabled(true)   // 音效默认已下线，显式开启以测引擎门控
         let pen = PenSound(store: store)
 
         pen.updateVelocity(500)

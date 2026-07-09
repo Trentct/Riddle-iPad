@@ -3,13 +3,13 @@ import XCTest
 
 final class SoundStoreTests: XCTestCase {
     @MainActor
-    func testDefaultsToEnabled() {
+    func testDefaultsToDisabled() {
         let suite = "SoundStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let store = SoundStore(defaults: defaults)
-        XCTAssertTrue(store.isEnabled)
+        XCTAssertFalse(store.isEnabled)   // 笔尖音效已下线，默认关闭
     }
 
     @MainActor
@@ -34,10 +34,10 @@ final class SoundStoreTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let store = SoundStore(defaults: defaults)
+        XCTAssertFalse(store.isEnabled)   // 默认关闭
+        store.toggle()
         XCTAssertTrue(store.isEnabled)
         store.toggle()
         XCTAssertFalse(store.isEnabled)
-        store.toggle()
-        XCTAssertTrue(store.isEnabled)
     }
 }
