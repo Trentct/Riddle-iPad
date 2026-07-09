@@ -45,6 +45,10 @@ struct InkCanvas: UIViewRepresentable {
         let onChange: (PKDrawing) -> Void
         private weak var canvasView: PKCanvasView?
 
+        // 笔速采样基线：上一次采样到的笔画点位置/时间戳，用于算相邻两次回调间的瞬时速度。
+        private var lastSampleLocation: CGPoint?
+        private var lastSampleTimeOffset: TimeInterval?
+
         init(canvasView: PKCanvasView, onChange: @escaping (PKDrawing) -> Void) {
             self.canvasView = canvasView
             self.onChange = onChange
@@ -52,16 +56,39 @@ struct InkCanvas: UIViewRepresentable {
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             onChange(canvasView.drawing)
+            reportPenVelocity(from: canvasView.drawing)
         }
 
         // 笔尖音效门控：用「工具接触/离开纸面」而非笔迹变化去判定书写区间——精确对应每一笔的起止，
         // 比对 drawingDidChange 做去抖推断更贴近真实运笔节奏（PenSound 内部有淡入淡出，连续落笔不会闪断）。
         func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
+            lastSampleLocation = nil
+            lastSampleTimeOffset = nil
             PenSound.shared.start()
         }
 
         func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
             PenSound.shared.stop()
+        }
+
+        /// 笔速采样：取当前笔画路径的最后一个点，与上一次采样点的位移/时间差算出瞬时速度（点/秒），
+        /// 喂给 `PenSound.updateVelocity`。`canvasViewDidBeginUsingTool` 已经把基线清空，所以每一笔
+        /// 的第一次回调只建立基线、不产生速度值——这正是笔尖刚触纸尚未移动时该近乎无声的来源。
+        private func reportPenVelocity(from drawing: PKDrawing) {
+            guard let stroke = drawing.strokes.last else { return }
+            let path = stroke.path
+            guard path.count > 0 else { return }
+            let point = path[path.count - 1]
+            defer {
+                lastSampleLocation = point.location
+                lastSampleTimeOffset = point.timeOffset
+            }
+            guard let prevLocation = lastSampleLocation, let prevTime = lastSampleTimeOffset else { return }
+            let dt = point.timeOffset - prevTime
+            guard dt > 0.001 else { return }   // 同一帧内的重复回调，时间差太小会算出失真的高速度
+            let distance = hypot(point.location.x - prevLocation.x, point.location.y - prevLocation.y)
+            let speed = CGFloat(distance) / CGFloat(dt)
+            PenSound.shared.updateVelocity(speed)
         }
 
         // 双指横扫判定：位移超阈值且以横向为主 → 翻纸。每次手势只翻一次。

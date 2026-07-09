@@ -58,4 +58,59 @@ final class PenSoundTests: XCTestCase {
         store.setEnabled(true)
         XCTAssertTrue(pen.shouldPlay())
     }
+
+    // MARK: - 笔速 → 强度 的纯函数（唯一能脱离 AVAudioEngine 精确断言的合成逻辑）
+
+    @MainActor
+    func testNormalizedIntensityIsZeroForNonPositiveOrInvalidSpeed() {
+        XCTAssertEqual(PenSound.normalizedIntensity(forSpeed: 0), 0)
+        XCTAssertEqual(PenSound.normalizedIntensity(forSpeed: -50), 0)
+        XCTAssertEqual(PenSound.normalizedIntensity(forSpeed: .nan), 0)
+        XCTAssertEqual(PenSound.normalizedIntensity(forSpeed: .infinity), 0)
+    }
+
+    @MainActor
+    func testNormalizedIntensityIsMonotonicallyNonDecreasing() {
+        let samples: [CGFloat] = [10, 50, 150, 300, 600, 900, 1200, 1400, 2000, 5000]
+        let values = samples.map { PenSound.normalizedIntensity(forSpeed: $0) }
+        for (a, b) in zip(values, values.dropFirst()) {
+            XCTAssertLessThanOrEqual(a, b, "强度应随笔速单调不减")
+        }
+    }
+
+    @MainActor
+    func testNormalizedIntensityClampsAtAndBeyondMaxSpeed() {
+        let atCap = PenSound.normalizedIntensity(forSpeed: 1400)
+        let wellBeyondCap = PenSound.normalizedIntensity(forSpeed: 10_000)
+        XCTAssertEqual(atCap, 1, accuracy: 0.0001)
+        XCTAssertEqual(wellBeyondCap, 1, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testNormalizedIntensityStaysWithinUnitRange() {
+        for speed: CGFloat in stride(from: 0, through: 3000, by: 37) {
+            let value = PenSound.normalizedIntensity(forSpeed: speed)
+            XCTAssertGreaterThanOrEqual(value, 0)
+            XCTAssertLessThanOrEqual(value, 1)
+        }
+    }
+
+    @MainActor
+    func testUpdateVelocityIsNoOpWhenNotActive() {
+        // 引擎没在播放（未 start()）时喂笔速，不应产生崩溃或异常状态——纯粹的安全性回归。
+        let suite = "PenSoundTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let store = SoundStore(defaults: defaults)
+        let pen = PenSound(store: store)
+
+        pen.updateVelocity(500)
+        XCTAssertFalse(pen.isActive)
+
+        pen.start()
+        pen.updateVelocity(500)
+        XCTAssertTrue(pen.isActive)
+        pen.stop()
+    }
 }

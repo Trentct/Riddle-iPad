@@ -22,6 +22,11 @@ final class QuillLayer {
     private let bankGlyphSize: CGFloat = 40
     private let bankCharSpacing: CGFloat = 6
 
+    /// AI 落笔动画的额定速度：与下面 `addAnimatedStroke` 里 `duration = length / 900` 用的是
+    /// 同一个基准。真实笔速用位移/时间算出来，AI 这边动画速度是设计常量，所以反过来：
+    /// 每一笔喂一次「额定速度 ± 抖动」给 PenSound，让笔画之间的音量有起伏，而不是整段一个强度。
+    private let quillNominalSpeed: CGFloat = 900
+
     init(host: UIView, pageBounds: CGRect) {
         self.host = host
         self.pageBounds = pageBounds
@@ -141,6 +146,13 @@ final class QuillLayer {
 
         let length = pathLength(stroke) * scale
         let duration = max(Double(length) / 900.0, 0.02)
+
+        // 笔尖音效：这一笔开始动画时喂一次带抖动的额定速度，让 AI 写字的声音跟着「一笔一笔」起伏，
+        // 而不是从落笔到写完一句维持同一个强度。笔画间隔（40ms）够短，不会被空闲看门狗判定为暂停；
+        // 句间的 350ms 间隔会被判定为暂停，声音自然安静下来，这就是「跟随书写」的听感来源。
+        let jitter = CGFloat.random(in: 0.75...1.15, using: &rng)
+        PenSound.shared.updateVelocity(quillNominalSpeed * jitter)
+
         let anim = CABasicAnimation(keyPath: "strokeEnd")
         anim.fromValue = 0
         anim.toValue = 1
