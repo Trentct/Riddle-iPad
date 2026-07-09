@@ -132,11 +132,17 @@ final class TurnEngine {
     }
 
     private func renderPage(_ drawing: PKDrawing, bounds: CGRect) -> Data {
-        let renderer = UIGraphicsImageRenderer(bounds: bounds)
-        return renderer.pngData { ctx in
+        // scale 1（而非默认屏幕 2×）+ JPEG：手写页是纯色底 + 稀疏墨迹，PNG@2x 约 360KB，
+        // 让 Moonshot 识图慢到数秒、上传也大；scale1 JPEG q0.6 降到几十 KB，识图/上传/token 全省。
+        // 识别手写只需可读分辨率，1× 足够。
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(bounds: bounds, format: format)
+        let image = renderer.image { ctx in
             Ink.paperColor.setFill()
             ctx.fill(bounds)
-            drawing.image(from: bounds, scale: 2).draw(in: bounds)
+            drawing.image(from: bounds, scale: 1).draw(in: bounds)
         }
+        return image.jpegData(compressionQuality: 0.6) ?? Data()
     }
 }

@@ -113,13 +113,15 @@ final class Oracle {
 
         let userContent: [[String: Any]] = [
             ["type": "image_url",
-             "image_url": ["url": "data:image/png;base64,\(pagePNG.base64EncodedString())"]],
+             "image_url": ["url": "data:image/jpeg;base64,\(pagePNG.base64EncodedString())"]],
             ["type": "text", "text": "(纸上浮现了新的墨迹)"],
         ]
-        history.append(["role": "user", "content": userContent])
-        // 磁盘上不留图片，只留占位符标记"这里用户写过字"。
+        // 只有本轮请求带图：把当前带图的 user 轮拼在历史之后发给模型；历史里旧的 user 轮一律只留
+        // 文字占位。否则多轮会把多张整页图累积进上下文——请求膨胀到数百 KB、撑爆 8k-vision 上下文
+        // 而卡死（正是"归野测多轮后没回复"的根因）。旧页面图对模型无用，与磁盘持久化的做法一致。
+        let messages = history + [["role": "user", "content": userContent]]
+        history.append(["role": "user", "content": "(手写)"])
         persistedLog.append(PersistedTurn(role: "user", text: "(手写)"))
-        let messages = history
 
         let prompt = systemPrompt()
         return AsyncThrowingStream { continuation in
