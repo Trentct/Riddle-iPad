@@ -70,12 +70,7 @@ struct AboutView: View {
 
     var body: some View {
         ZStack {
-            Color(Ink.paperColor).ignoresSafeArea()
-            Image(uiImage: PaperTexture.tile)
-                .resizable(resizingMode: .tile)
-                .opacity(0.05)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
+            PaperMetalView(style: PaperStyleStore.shared.current)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {

@@ -213,15 +213,7 @@ struct HandPickerView: View {
         GeometryReader { geo in
             let frames = computeRowFrames(containerSize: geo.size)
             ZStack {
-                Color(Ink.paperColor).ignoresSafeArea()
-                Image(uiImage: PaperTexture.tile)
-                    .resizable(resizingMode: .tile)
-                    .opacity(0.05)
-                    .ignoresSafeArea()
-                    .allowsHitTesting(false)
-                RadialGradient(colors: [.clear, .black.opacity(0.1)],
-                               center: .center, startRadius: 200, endRadius: 900)
-                    .ignoresSafeArea().allowsHitTesting(false)
+                PaperMetalView(style: PaperStyleStore.shared.current)
 
                 Text("以笔圈定一种字迹，我便用它回信")
                     .font(.custom(ReplyHands.shouze.fontName, size: 30))

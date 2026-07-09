@@ -11,6 +11,10 @@ struct PaperStyle: Identifiable, Equatable {
     let vignetteOpacity: CGFloat
     let ruled: Bool
     let riceFiber: Bool
+    /// 做旧/暖色强度：0 表示不做旧，值越大边缘越往深棕靠、低频斑驳越明显（羊皮纸用）。
+    let warmth: CGFloat
+    /// 纤维方向性：0 表示各向同性细颗粒，1 表示宣纸式条状纤维纹理。
+    let fiberDirectionality: CGFloat
 
     static func == (lhs: PaperStyle, rhs: PaperStyle) -> Bool { lhs.id == rhs.id }
 }
@@ -21,28 +25,32 @@ enum PaperStyles {
         paperColor: UIColor(red: 0xF2 / 255, green: 0xED / 255, blue: 0xE1 / 255, alpha: 1),
         userInk: UIColor(red: 0x1A / 255, green: 0x1A / 255, blue: 0x2E / 255, alpha: 1),
         quillInk: UIColor(red: 0x0F / 255, green: 0x0F / 255, blue: 0x23 / 255, alpha: 1),
-        noiseOpacity: 0.05, vignetteOpacity: 0.08, ruled: false, riceFiber: false)
+        noiseOpacity: 0.05, vignetteOpacity: 0.08, ruled: false, riceFiber: false,
+        warmth: 0, fiberDirectionality: 0)
 
     static let parchment = PaperStyle(
         id: "parchment", name: "羊皮纸",
         paperColor: UIColor(red: 0xEA / 255, green: 0xD9 / 255, blue: 0xB0 / 255, alpha: 1),
         userInk: UIColor(red: 0x40 / 255, green: 0x2D / 255, blue: 0x16 / 255, alpha: 1),
         quillInk: UIColor(red: 0x2E / 255, green: 0x1F / 255, blue: 0x0E / 255, alpha: 1),
-        noiseOpacity: 0.09, vignetteOpacity: 0.16, ruled: false, riceFiber: false)
+        noiseOpacity: 0.09, vignetteOpacity: 0.16, ruled: false, riceFiber: false,
+        warmth: 0.8, fiberDirectionality: 0)
 
     static let ruled = PaperStyle(
         id: "ruled", name: "横线信纸",
         paperColor: UIColor(red: 0xF7 / 255, green: 0xF4 / 255, blue: 0xEC / 255, alpha: 1),
         userInk: UIColor(red: 0x1F / 255, green: 0x3A / 255, blue: 0x6E / 255, alpha: 1),
         quillInk: UIColor(red: 0x12 / 255, green: 0x26 / 255, blue: 0x4A / 255, alpha: 1),
-        noiseOpacity: 0.04, vignetteOpacity: 0.08, ruled: true, riceFiber: false)
+        noiseOpacity: 0.04, vignetteOpacity: 0.08, ruled: true, riceFiber: false,
+        warmth: 0, fiberDirectionality: 0)
 
     static let rice = PaperStyle(
         id: "rice", name: "宣纸",
         paperColor: UIColor(red: 0xF6 / 255, green: 0xF3 / 255, blue: 0xEA / 255, alpha: 1),
         userInk: UIColor(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1C / 255, alpha: 1),
         quillInk: UIColor(red: 0x10 / 255, green: 0x10 / 255, blue: 0x10 / 255, alpha: 1),
-        noiseOpacity: 0.06, vignetteOpacity: 0.08, ruled: false, riceFiber: true)
+        noiseOpacity: 0.06, vignetteOpacity: 0.08, ruled: false, riceFiber: true,
+        warmth: 0.15, fiberDirectionality: 0.85)
 
     /// 固定顺序：素笺 → 羊皮纸 → 横线信纸 → 宣纸
     static let all: [PaperStyle] = [plain, parchment, ruled, rice]

@@ -9,16 +9,7 @@ struct PaywallView: View {
 
     var body: some View {
         ZStack {
-            Color(Ink.paperColor).ignoresSafeArea()
-            Image(uiImage: PaperTexture.tile)
-                .resizable(resizingMode: .tile)
-                .opacity(0.05)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-            RadialGradient(colors: [.clear, .black.opacity(0.12)],
-                           center: .center, startRadius: 200, endRadius: 900)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
+            PaperMetalView(style: PaperStyleStore.shared.current)
 
             VStack(spacing: 22) {
                 Spacer()

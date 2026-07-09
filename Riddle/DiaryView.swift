@@ -45,32 +45,13 @@ struct DiaryView: View {
         GeometryReader { geo in
             ZStack {
                 Group {
-                    Color(style.paperColor).ignoresSafeArea()
+                    PaperMetalView(style: style)
 
                     if style.ruled {
                         RuledLinesView()
                             .ignoresSafeArea()
                             .transition(.opacity)
                     }
-
-                    Image(uiImage: PaperTexture.tile)
-                        .resizable(resizingMode: .tile)
-                        .opacity(style.noiseOpacity)
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-
-                    if style.riceFiber {
-                        Image(uiImage: PaperTexture.fiberTile)
-                            .resizable(resizingMode: .tile)
-                            .opacity(0.03)
-                            .ignoresSafeArea()
-                            .allowsHitTesting(false)
-                            .transition(.opacity)
-                    }
-
-                    RadialGradient(colors: [.clear, .black.opacity(style.vignetteOpacity)],
-                                   center: .center, startRadius: 200, endRadius: 900)
-                        .ignoresSafeArea().allowsHitTesting(false)
                 }
                 .animation(.easeInOut(duration: 0.35), value: style.id)
 
